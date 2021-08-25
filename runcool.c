@@ -147,13 +147,7 @@ void read_coolexe_file(char filename[])
     FILE *file = fopen(filename, "rb");
     if(file)
     {
-        // TODO: should this be IWORD or AWORD???
         fread(main_memory, sizeof(AWORD), sizeof(main_memory), file);
-        for(int i = 0; i < sizeof(main_memory); ++i)
-        {
-            //printf("%i ", main_memory[i]);
-            write_memory(i, main_memory[i]);
-        }
         fclose(file);
     }
     else
