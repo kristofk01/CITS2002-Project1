@@ -147,24 +147,13 @@ void read_coolexe_file(char filename[])
     FILE *file = fopen(filename, "rb");
     if(file)
     {
-        char buffer[512];
-        for(int i = 0; i < 512; ++i)
-            buffer[i] = -1;
-        
-        fgets(buffer, sizeof(buffer), file);
-        int j = 0;
-        AWORD u = 1;
-        for(int i = 0; i < 512; i += u)
+        // TODO: should this be IWORD or AWORD???
+        fread(main_memory, sizeof(AWORD), sizeof(main_memory), file);
+        for(int i = 0; i < sizeof(main_memory); ++i)
         {
-            if(buffer[i] > -1)
-            {
-                write_memory(j, buffer[i]);
-                printf("%i, ", buffer[i]);
-                ++j;
-            }
+            //printf("%i ", main_memory[i]);
+            write_memory(i, main_memory[i]);
         }
-        printf("\n");
-
         fclose(file);
     }
     else
