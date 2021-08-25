@@ -1,6 +1,6 @@
 //  CITS2002 Project 1 2021
-//  Name(s):             student-name1   (, student-name2)
-//  Student number(s):   student-number1 (, student-number2)
+//  Name(s):             student-name1   , Kristof Kovacs
+//  Student number(s):   student-number1 , 22869854
 
 //  compile with:  cc -std=c11 -Wall -Werror -o runcool runcool.c
 
@@ -144,6 +144,33 @@ void read_coolexe_file(char filename[])
     memset(main_memory, 0, sizeof main_memory);   //  clear all memory
 
 //  READ CONTENTS OF coolexe FILE
+    FILE *file = fopen(filename, "rb");
+    if(file)
+    {
+        char buffer[512];
+        for(int i = 0; i < 512; ++i)
+            buffer[i] = -1;
+        
+        fgets(buffer, sizeof(buffer), file);
+        int j = 0;
+        AWORD u = 1;
+        for(int i = 0; i < 512; i += u)
+        {
+            if(buffer[i] > -1)
+            {
+                write_memory(j, buffer[i]);
+                printf("%i, ", buffer[i]);
+                ++j;
+            }
+        }
+        printf("\n");
+
+        fclose(file);
+    }
+    else
+    {
+        fprintf(stderr, "ERROR: Cannot open file %s.\n", filename);
+    }
 }
 
 //  -------------------------------------------------------------------
