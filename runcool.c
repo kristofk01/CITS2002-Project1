@@ -105,14 +105,27 @@ void write_memory(AWORD address, AWORD value)
 
 //  -------------------------------------------------------------------
 
-// NOTE: Debug utility for printing out n elements of the main_memory
-void print_memory(int n)
+// NOTE: Debug utility which prints out the bottom n elements 
+// of main_memory.
+void DEBUG_print_memory(int n)
 {
     for(int i = 0; i < n; ++i)
     {
         printf("%i, ", main_memory[i]);
     }
     printf("\n");
+}
+
+// Prints n elements of the stack
+void DEBUG_print_tos(int n)
+{
+    int k = N_MAIN_MEMORY_WORDS;
+    printf("\nTOS: (address: value)\n");
+    for(int i = k; i > (k - n); --i)
+    {
+        printf("%i: %i, ", i, main_memory[i]);
+    }
+    printf("\n\n");
 }
 
 //  -------------------------------------------------------------------
@@ -125,73 +138,97 @@ int execute_stackmachine(void)
     int SP      = N_MAIN_MEMORY_WORDS;  // initialised to top-of-stack
     int FP      = 0;                    // frame pointer
 
-    print_memory(7);
+    DEBUG_print_memory(15);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
         IWORD instruction   = read_memory(PC);
         ++PC;
 
-        printf(">> %s\n", INSTRUCTION_name[instruction]);
-//      printf("SP: %i\nPC: %i\n", SP, PC);
-//      print_memory(7);
+        printf("\n>> %s\n", INSTRUCTION_name[instruction]);
+//        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
+//        DEBUG_print_tos(4);
 
         if(instruction == I_HALT) {
             break;
         }
 
         //No operation: PC advanced to the next instruction.
-       if(instruction == I_NOP) {
-           continue;
-       }
+        if(instruction == I_NOP) {
+            continue;
+        }
 
 //Add: Two integers on TOS popped and added. Result is left on the TOS.
-       if(instruction == I_ADD) {
-           int value1 = read_memory(SP);
-           write_memory(SP++, 0);
+        if(instruction == I_ADD) {
+            int value1 = read_memory(SP++);
+            int value2 = read_memory(SP++);
+            write_memory(--SP, value1 + value2);
+            printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
 
-           int value2 = read_memory(SP);
-           write_memory(SP, value1 + value2);
-       }
+            n_main_memory_reads += 2;
+            ++n_main_memory_writes;
+        }
 
 //Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
-       if(instruction == I_SUB) {
-           int value1 = read_memory(SP);
-           write_memory(SP++, 0);
+        if(instruction == I_SUB) {
+            int value1 = read_memory(SP++);
+            int value2 = read_memory(SP++);
+            write_memory(--SP, value1 - value2);
+            printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
 
-           int value2 = read_memory(SP);
-           write_memory(SP, value1 - value2);
-       }
+            n_main_memory_reads += 2;
+            ++n_main_memory_writes;
+        }
 
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
-       if(instruction == I_MULT) {
-           int value1 = read_memory(SP);
-           write_memory(SP++, 0);
+        if(instruction == I_MULT) {
+            int value1 = read_memory(SP++);
+            int value2 = read_memory(SP++);
+            write_memory(--SP, value1 * value2);
+            printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
 
-           int value2 = read_memory(SP);
-           write_memory(SP, value1 * value2);
-       }
+            n_main_memory_reads += 2;
+            ++n_main_memory_writes;
+        }
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
-       if(instruction == I_DIV) {
-           int value1 = read_memory(SP);
-           write_memory(SP++, 0);
+        if(instruction == I_DIV) {
+            int value1 = read_memory(SP++);
+            int value2 = read_memory(SP++);
+            write_memory(--SP, value1 / value2);
+            printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
 
-           int value2 = read_memory(SP);
-           write_memory(SP, value1 / value2);
+            n_main_memory_reads += 2;
+            ++n_main_memory_writes;
        }
 
 //Function call: WIP
         if(instruction == I_CALL)
         {
             AWORD address = read_memory(PC++);
-            //is setting FP to the function's address the right idea?
-            //FP = (int)address;
+            FP = PC;
+            PC = address;
             printf("calling function at address: %i\n", address);
+
             ++n_main_memory_reads;
         }
 
 //Function return: WIP
+        if(instruction == I_RETURN)
+        {
+            AWORD returnVal = read_memory(SP);
+            printf("return from function with value: %i\n", returnVal);
+
+            PC = FP;
+            // return.cool says on the coolc website: 
+            //      "return value (on TOS) to be copied to FP+1"
+            // but i feel like i'm doing something wrong here:
+            write_memory(SP, returnVal);   // write returnVal to TOS
+            write_memory(FP+1, returnVal); // write returnVal to FP+1
+
+            ++n_main_memory_reads;
+            n_main_memory_writes += 2;
+        }
 
 //Unconditional jump: Flow of execution jumps to the next specified address.
         if(instruction == I_JMP) {
@@ -218,14 +255,23 @@ int execute_stackmachine(void)
 // Push Constant: This should push an integer constant onto the stack.
         if(instruction == I_PUSHC) {
             AWORD value = read_memory(PC++);
-            write_memory(SP, value);
+            write_memory(--SP, value);
+            printf("pushing onto stack a value of: %i\n", value);
+
             ++n_main_memory_reads;
             ++n_main_memory_writes;
         }
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
         if(instruction == I_PUSHA) {
-            write_memory(SP--, read_memory(PC++));
+            // TODO: fix
+            AWORD address = read_memory(PC++);
+            AWORD value = read_memory(address);
+            write_memory(--SP, value);
+            printf("pushing onto stack a value of: %i\n", value);
+
+            n_main_memory_reads += 2;
+            ++n_main_memory_writes;
         }
 
 // Push Relative: Push the integer in the next word, which specifies an address that is the frame pointer + offset.
@@ -244,6 +290,9 @@ int execute_stackmachine(void)
         }
 
     }
+
+    // DEBUG: print TOS
+    printf("Exit status (TOS): %i\n", read_memory(SP));
 
 //  THE RESULT OF EXECUTING THE INSTRUCTIONS IS FOUND ON THE TOP-OF-STACK
     return read_memory(SP);
