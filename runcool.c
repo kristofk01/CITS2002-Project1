@@ -105,8 +105,9 @@ void write_memory(AWORD address, AWORD value)
 
 //  -------------------------------------------------------------------
 
-// NOTE: Debug utility for printing out n elements of the main_memory
-void print_memory(int n)
+// NOTE: Debug utility which prints out the bottom n elements 
+// of main_memory.
+void DEBUG_print_memory(int n)
 {
     for(int i = 0; i < n; ++i)
     {
@@ -125,7 +126,7 @@ int execute_stackmachine(void)
     int SP      = N_MAIN_MEMORY_WORDS;  // initialised to top-of-stack
     int FP      = 0;                    // frame pointer
 
-    print_memory(7);
+    DEBUG_print_memory(15);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -134,16 +135,15 @@ int execute_stackmachine(void)
 
         printf(">> %s\n", INSTRUCTION_name[instruction]);
 //      printf("SP: %i\nPC: %i\n", SP, PC);
-//      print_memory(7);
 
         if(instruction == I_HALT) {
             break;
         }
 
         //No operation: PC advanced to the next instruction.
-       if(instruction == I_NOP) {
-           continue;
-       }
+        if(instruction == I_NOP) {
+            continue;
+        }
 
 //Add: Two integers on TOS popped and added. Result is left on the TOS.
        if(instruction == I_ADD) {
@@ -185,13 +185,25 @@ int execute_stackmachine(void)
         if(instruction == I_CALL)
         {
             AWORD address = read_memory(PC++);
-            //is setting FP to the function's address the right idea?
-            //FP = (int)address;
+            FP = PC;
+            PC = address;
             printf("calling function at address: %i\n", address);
+
             ++n_main_memory_reads;
         }
 
 //Function return: WIP
+        if(instruction == I_RETURN)
+        {
+            AWORD returnVal = read_memory(PC);
+            printf("return from function with value: %i\n", returnVal);
+            PC = FP;
+            // return.cool says on the coolc website: 
+            //      "return value (on TOS) to be copied to FP+1"
+            // so i'm doing something wrong here
+
+            ++n_main_memory_reads;
+        }
 
 //Unconditional jump: Flow of execution jumps to the next specified address.
         if(instruction == I_JMP) {
