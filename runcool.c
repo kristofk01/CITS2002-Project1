@@ -212,12 +212,12 @@ int execute_stackmachine(void)
 
 // Pop Absolute: Pop the integer in the address, which is specified in the word immediately after the pop declaration.
         if(instruction  == I_POPA) {
-            write_memory(0, read_memory(PC++));
+            write_memory(read_memory(PC++), 0);
         }
 
 // Pop Relative: Pop the integer in the next word, which specifies an address that is the frame pointer + offset.
         if(instruction == I_POPR) {
-            write_memory(0, FP + read_memory(PC++));
+            write_memory(FP + read_memory(PC++), 0);
         }
 
     }
