@@ -105,6 +105,18 @@ void write_memory(AWORD address, AWORD value)
 
 //  -------------------------------------------------------------------
 
+// NOTE: Debug utility for printing out n elements of the main_memory
+void print_memory(int n)
+{
+    for(int i = 0; i < n; ++i)
+    {
+        printf("%i, ", main_memory[i]);
+    }
+    printf("\n");
+}
+
+//  -------------------------------------------------------------------
+
 //  EXECUTE THE INSTRUCTIONS IN main_memory[]
 int execute_stackmachine(void)
 {
@@ -113,16 +125,16 @@ int execute_stackmachine(void)
     int SP      = N_MAIN_MEMORY_WORDS;  // initialised to top-of-stack
     int FP      = 0;                    // frame pointer
 
-//  REMOVE THE FOLLOWING LINE ONCE YOU ACTUALLY NEED TO USE FP
-    FP = FP;
-
+    print_memory(7);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
         IWORD instruction   = read_memory(PC);
         ++PC;
 
-//      printf("%s\n", INSTRUCTION_name[instruction]);
+        printf(">> %s\n", INSTRUCTION_name[instruction]);
+//      printf("SP: %i\nPC: %i\n", SP, PC);
+//      print_memory(7);
 
         if(instruction == I_HALT) {
             break;
@@ -130,7 +142,7 @@ int execute_stackmachine(void)
 
         //No operation: PC advanced to the next instruction.
        if(instruction == I_NOP) {
-           ;
+           continue;
        }
 
 //Add: Two integers on TOS popped and added. Result is left on the TOS.
@@ -170,6 +182,14 @@ int execute_stackmachine(void)
        }
 
 //Function call: WIP
+        if(instruction == I_CALL)
+        {
+            AWORD address = read_memory(PC++);
+            //is setting FP to the function's address the right idea?
+            //FP = (int)address;
+            printf("calling function at address: %i\n", address);
+            ++n_main_memory_reads;
+        }
 
 //Function return: WIP
 
@@ -197,7 +217,10 @@ int execute_stackmachine(void)
 
 // Push Constant: This should push an integer constant onto the stack.
         if(instruction == I_PUSHC) {
-            write_memory(SP--, PC++);
+            AWORD value = read_memory(PC++);
+            write_memory(SP, value);
+            ++n_main_memory_reads;
+            ++n_main_memory_writes;
         }
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
@@ -237,7 +260,8 @@ void read_coolexe_file(char filename[])
     FILE *file = fopen(filename, "rb");
     if(file)
     {
-        fread(main_memory, sizeof(AWORD), N_MAIN_MEMORY_WORDS, file);
+        n_main_memory_writes += fread(main_memory, sizeof(AWORD),
+                                      N_MAIN_MEMORY_WORDS, file);
         fclose(file);
     }
     else
