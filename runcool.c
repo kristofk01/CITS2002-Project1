@@ -237,7 +237,7 @@ void read_coolexe_file(char filename[])
     FILE *file = fopen(filename, "rb");
     if(file)
     {
-        fread(main_memory, sizeof(AWORD), sizeof(main_memory), file);
+        fread(main_memory, sizeof(AWORD), N_MAIN_MEMORY_WORDS, file);
         fclose(file);
     }
     else
