@@ -234,6 +234,16 @@ void read_coolexe_file(char filename[])
     memset(main_memory, 0, sizeof main_memory);   //  clear all memory
 
 //  READ CONTENTS OF coolexe FILE
+    FILE *file = fopen(filename, "rb");
+    if(file)
+    {
+        fread(main_memory, sizeof(AWORD), sizeof(main_memory), file);
+        fclose(file);
+    }
+    else
+    {
+        fprintf(stderr, "ERROR: Cannot open file %s.\n", filename);
+    }
 }
 
 //  -------------------------------------------------------------------
