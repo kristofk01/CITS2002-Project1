@@ -1,6 +1,6 @@
 //  CITS2002 Project 1 2021
-//  Name(s):             student-name1   , Kristof Kovacs
-//  Student number(s):   student-number1 , 22869854
+//  Name(s):             Daniel Ling   , Kristof Kovacs
+//  Student number(s):   22896002 , 22869854
 
 //  compile with:  cc -std=c11 -Wall -Werror -o runcool runcool.c
 
@@ -128,8 +128,98 @@ int execute_stackmachine(void)
             break;
         }
 
-//  SUPPORT OTHER INSTRUCTIONS HERE
-//      ....
+        //No operation: PC advanced to the next instruction.
+       if(instruction == I_NOP) {
+           ;
+       }
+
+//Add: Two integers on TOS popped and added. Result is left on the TOS.
+       if(instruction == I_ADD) {
+           int value1 = read_memory(SP);
+           write_memory(SP++, 0);
+
+           int value2 = read_memory(SP);
+           write_memory(SP, value1 + value2);
+       }
+
+//Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
+       if(instruction == I_SUB) {
+           int value1 = read_memory(SP);
+           write_memory(SP++, 0);
+
+           int value2 = read_memory(SP);
+           write_memory(SP, value1 - value2);
+       }
+
+//Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
+       if(instruction == I_MULT) {
+           int value1 = read_memory(SP);
+           write_memory(SP++, 0);
+
+           int value2 = read_memory(SP);
+           write_memory(SP, value1 * value2);
+       }
+
+//Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
+       if(instruction == I_DIV) {
+           int value1 = read_memory(SP);
+           write_memory(SP++, 0);
+
+           int value2 = read_memory(SP);
+           write_memory(SP, value1 / value2);
+       }
+
+//Function call: WIP
+
+//Function return: WIP
+
+//Unconditional jump: Flow of execution jumps to the next specified address.
+        if(instruction == I_JMP) {
+            PC = read_memory(PC);
+        }
+
+//Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
+        if(instruction == I_JEQ) {
+            int condition = read_memory(SP);
+            write_memory(SP, 0);
+
+            if(condition == 0) PC = read_memory(PC);
+        }
+
+//Print integer: Value at TOS popped and printed to stdout.
+        if(instruction == I_PRINTI) {
+            printf("%u \n", SP);
+            write_memory(SP, 0);
+        }
+
+//Print String: Print the next NULL-byte terminated character string. WIP
+
+
+// Push Constant: This should push an integer constant onto the stack.
+        if(instruction == I_PUSHC) {
+            write_memory(SP--, PC++);
+        }
+
+// Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
+        if(instruction == I_PUSHA) {
+            write_memory(SP--, read_memory(PC++));
+        }
+
+// Push Relative: Push the integer in the next word, which specifies an address that is the frame pointer + offset.
+        if(instruction == I_PUSHR) {
+            write_memory(SP--, read_memory(FP + read_memory(PC++)));
+        }
+
+// Pop Absolute: Pop the integer in the address, which is specified in the word immediately after the pop declaration.
+        if(instruction  == I_POPA) {
+            write_memory(0, read_memory(PC++));
+        }
+
+// Pop Relative: Pop the integer in the next word, which specifies an address that is the frame pointer + offset.
+        if(instruction == I_POPR) {
+            write_memory(0, FP + read_memory(PC++));
+        }
+
     }
 
 //  THE RESULT OF EXECUTING THE INSTRUCTIONS IS FOUND ON THE TOP-OF-STACK
