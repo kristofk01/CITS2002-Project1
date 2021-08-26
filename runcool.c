@@ -105,6 +105,18 @@ void write_memory(AWORD address, AWORD value)
 
 //  -------------------------------------------------------------------
 
+// NOTE: Debug utility for printing out n elements of the main_memory
+void print_memory(int n)
+{
+    for(int i = 0; i < n; ++i)
+    {
+        printf("%i, ", main_memory[i]);
+    }
+    printf("\n");
+}
+
+//  -------------------------------------------------------------------
+
 //  EXECUTE THE INSTRUCTIONS IN main_memory[]
 int execute_stackmachine(void)
 {
@@ -122,7 +134,9 @@ int execute_stackmachine(void)
         IWORD instruction   = read_memory(PC);
         ++PC;
 
-//      printf("%s\n", INSTRUCTION_name[instruction]);
+        printf(">> %s\n", INSTRUCTION_name[instruction]);
+//      printf("SP: %i\nPC: %i\n", SP, PC);
+//      print_memory(7);
 
         if(instruction == I_HALT) {
             break;
@@ -130,7 +144,7 @@ int execute_stackmachine(void)
 
         //No operation: PC advanced to the next instruction.
        if(instruction == I_NOP) {
-           ;
+           continue;
        }
 
 //Add: Two integers on TOS popped and added. Result is left on the TOS.
@@ -170,6 +184,12 @@ int execute_stackmachine(void)
        }
 
 //Function call: WIP
+        if(instruction == I_CALL)
+        {
+            IWORD address = read_memory(PC);
+            instruction = address;
+            printf(">>new>> %i\n", instruction);
+        }
 
 //Function return: WIP
 
@@ -197,7 +217,8 @@ int execute_stackmachine(void)
 
 // Push Constant: This should push an integer constant onto the stack.
         if(instruction == I_PUSHC) {
-            write_memory(SP--, PC++);
+            AWORD value = read_memory(PC);
+            write_memory(SP, value);
         }
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
@@ -212,12 +233,12 @@ int execute_stackmachine(void)
 
 // Pop Absolute: Pop the integer in the address, which is specified in the word immediately after the pop declaration.
         if(instruction  == I_POPA) {
-            write_memory(0, read_memory(PC++));
+            write_memory(read_memory(PC++), 0);
         }
 
 // Pop Relative: Pop the integer in the next word, which specifies an address that is the frame pointer + offset.
         if(instruction == I_POPR) {
-            write_memory(0, FP + read_memory(PC++));
+            write_memory(FP + read_memory(PC++), 0);
         }
 
     }
@@ -237,7 +258,8 @@ void read_coolexe_file(char filename[])
     FILE *file = fopen(filename, "rb");
     if(file)
     {
-        fread(main_memory, sizeof(AWORD), sizeof(main_memory), file);
+        n_main_memory_writes += fread(main_memory, sizeof(AWORD),
+                                      N_MAIN_MEMORY_WORDS, file);
         fclose(file);
     }
     else
