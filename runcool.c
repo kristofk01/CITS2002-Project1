@@ -125,9 +125,7 @@ int execute_stackmachine(void)
     int SP      = N_MAIN_MEMORY_WORDS;  // initialised to top-of-stack
     int FP      = 0;                    // frame pointer
 
-//  REMOVE THE FOLLOWING LINE ONCE YOU ACTUALLY NEED TO USE FP
-    FP = FP;
-
+    print_memory(7);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -186,9 +184,11 @@ int execute_stackmachine(void)
 //Function call: WIP
         if(instruction == I_CALL)
         {
-            IWORD address = read_memory(PC);
-            instruction = address;
-            printf(">>new>> %i\n", instruction);
+            AWORD address = read_memory(PC++);
+            //is setting FP to the function's address the right idea?
+            //FP = (int)address;
+            printf("calling function at address: %i\n", address);
+            ++n_main_memory_reads;
         }
 
 //Function return: WIP
@@ -217,8 +217,10 @@ int execute_stackmachine(void)
 
 // Push Constant: This should push an integer constant onto the stack.
         if(instruction == I_PUSHC) {
-            AWORD value = read_memory(PC);
+            AWORD value = read_memory(PC++);
             write_memory(SP, value);
+            ++n_main_memory_reads;
+            ++n_main_memory_writes;
         }
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
