@@ -153,6 +153,7 @@ void read_coolexe_file(char filename[])
     else
     {
         fprintf(stderr, "ERROR: Cannot open file %s.\n", filename);
+        exit(EXIT_FAILURE);
     }
 }
 
