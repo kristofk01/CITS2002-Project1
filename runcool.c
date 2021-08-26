@@ -161,8 +161,8 @@ int execute_stackmachine(void)
 //Add: Two integers on TOS popped and added. Result is left on the TOS.
         if(instruction == I_ADD) {
             int value1 = read_memory(SP++);
-            int value2 = read_memory(SP++);
-            write_memory(--SP, value1 + value2);
+            int value2 = read_memory(SP);
+            write_memory(SP, value1 + value2);
             printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
 
             n_main_memory_reads += 2;
@@ -172,8 +172,8 @@ int execute_stackmachine(void)
 //Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
         if(instruction == I_SUB) {
             int value1 = read_memory(SP++);
-            int value2 = read_memory(SP++);
-            write_memory(--SP, value1 - value2);
+            int value2 = read_memory(SP);
+            write_memory(SP, value1 - value2);
             printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
 
             n_main_memory_reads += 2;
@@ -183,8 +183,8 @@ int execute_stackmachine(void)
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
         if(instruction == I_MULT) {
             int value1 = read_memory(SP++);
-            int value2 = read_memory(SP++);
-            write_memory(--SP, value1 * value2);
+            int value2 = read_memory(SP);
+            write_memory(SP, value1 * value2);
             printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
 
             n_main_memory_reads += 2;
@@ -194,8 +194,8 @@ int execute_stackmachine(void)
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
         if(instruction == I_DIV) {
             int value1 = read_memory(SP++);
-            int value2 = read_memory(SP++);
-            write_memory(--SP, value1 / value2);
+            int value2 = read_memory(SP);
+            write_memory(SP, value1 / value2);
             printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
 
             n_main_memory_reads += 2;
