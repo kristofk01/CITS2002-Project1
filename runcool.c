@@ -95,11 +95,13 @@ void report_statistics(void)
 
 AWORD read_memory(int address)
 {
+    ++n_main_memory_reads;
     return main_memory[address];
 }
 
 void write_memory(AWORD address, AWORD value)
 {
+    ++n_main_memory_writes;
     main_memory[address] = value;
 }
 
@@ -138,6 +140,13 @@ int execute_stackmachine(void)
     int SP      = N_MAIN_MEMORY_WORDS;  // initialised to top-of-stack
     int FP      = 0;                    // frame pointer
 
+// Since we can't declare new variables inside each case in the switch statement,
+// is this the best solution?
+    IWORD value1, value2;
+    AWORD address;
+    AWORD returnVal;
+    IWORD value;
+
     DEBUG_print_memory(15);
     while(true) {
 
@@ -153,146 +162,123 @@ int execute_stackmachine(void)
             break;
         }
 
-        //No operation: PC advanced to the next instruction.
-        if(instruction == I_NOP) {
-            continue;
-        }
+        switch(instruction)
+        {
+// No operation: PC advanced to the next instruction.
+            case I_NOP:
+                continue;
 
-//Add: Two integers on TOS popped and added. Result is left on the TOS.
-        if(instruction == I_ADD) {
-            int value1 = read_memory(SP++);
-            int value2 = read_memory(SP);
-            write_memory(SP, value1 + value2);
-            printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
+// Add: Two integers on TOS popped and added. Result is left on the TOS.
+            case I_ADD:
+                value1 = read_memory(SP++);
+                value2 = read_memory(SP);
+                write_memory(SP, value1 + value2);
+                printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
+                break;
 
-            n_main_memory_reads += 2;
-            ++n_main_memory_writes;
-        }
-
-//Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
-        if(instruction == I_SUB) {
-            int value1 = read_memory(SP++);
-            int value2 = read_memory(SP);
-            write_memory(SP, value1 - value2);
-            printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
-
-            n_main_memory_reads += 2;
-            ++n_main_memory_writes;
-        }
+// Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
+            case I_SUB:
+                value1 = read_memory(SP++);
+                value2 = read_memory(SP);
+                write_memory(SP, value1 - value2);
+                printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
+                break;
 
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
-        if(instruction == I_MULT) {
-            int value1 = read_memory(SP++);
-            int value2 = read_memory(SP);
-            write_memory(SP, value1 * value2);
-            printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
-
-            n_main_memory_reads += 2;
-            ++n_main_memory_writes;
-        }
+            case I_MULT:
+                value1 = read_memory(SP++);
+                value2 = read_memory(SP);
+                write_memory(SP, value1 * value2);
+                printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
+                break;
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
-        if(instruction == I_DIV) {
-            int value1 = read_memory(SP++);
-            int value2 = read_memory(SP);
-            write_memory(SP, value1 / value2);
-            printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
+            case I_DIV:
+                value1 = read_memory(SP++);
+                value2 = read_memory(SP);
+                write_memory(SP, value1 / value2);
+                printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
+                break;
 
-            n_main_memory_reads += 2;
-            ++n_main_memory_writes;
-       }
+// Call: WIP
+            case I_CALL:
+                address = read_memory(PC++);
+                FP = PC;
+                PC = address;
+                printf("calling function at address: %i\n", address);
+                break;
 
-//Function call: WIP
-        if(instruction == I_CALL)
-        {
-            AWORD address = read_memory(PC++);
-            FP = PC;
-            PC = address;
-            printf("calling function at address: %i\n", address);
+// Return: WIP
+            case I_RETURN:
+                returnVal = read_memory(SP);
+                printf("return from function with value: %i\n", returnVal);
 
-            ++n_main_memory_reads;
-        }
+                PC = FP;
+                // return.cool says on the coolc website: 
+                //      "return value (on TOS) to be copied to FP+1"
+                // but i feel like i'm doing something wrong here:
+                write_memory(SP, returnVal);   // write returnVal to TOS
+                write_memory(FP+1, returnVal); // write returnVal to FP+1
+                break;
 
-//Function return: WIP
-        if(instruction == I_RETURN)
-        {
-            AWORD returnVal = read_memory(SP);
-            printf("return from function with value: %i\n", returnVal);
+// Unconditional jump: Flow of execution jumps to the next specified address.
+            case I_JMP:
+                PC = read_memory(PC);
+                break;
 
-            PC = FP;
-            // return.cool says on the coolc website: 
-            //      "return value (on TOS) to be copied to FP+1"
-            // but i feel like i'm doing something wrong here:
-            write_memory(SP, returnVal);   // write returnVal to TOS
-            write_memory(FP+1, returnVal); // write returnVal to FP+1
+// Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
+            case I_JEQ:
+                value = read_memory(SP);
+                write_memory(SP, 0);
 
-            ++n_main_memory_reads;
-            n_main_memory_writes += 2;
-        }
+                if(value == 0)
+                    PC = read_memory(PC);
+                break;
 
-//Unconditional jump: Flow of execution jumps to the next specified address.
-        if(instruction == I_JMP) {
-            PC = read_memory(PC);
-        }
+// Print integer: Value at TOS popped and printed to stdout.
+            case I_PRINTI:
+                printf("%u \n", SP);
+                write_memory(SP, 0);
+                break;
 
-//Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
-        if(instruction == I_JEQ) {
-            int condition = read_memory(SP);
-            write_memory(SP, 0);
-
-            if(condition == 0) PC = read_memory(PC);
-        }
-
-//Print integer: Value at TOS popped and printed to stdout.
-        if(instruction == I_PRINTI) {
-            printf("%u \n", SP);
-            write_memory(SP, 0);
-        }
-
-//Print String: Print the next NULL-byte terminated character string. WIP
-
+// Print String: Print the next NULL-byte terminated character string. WIP
+            case I_PRINTS:
+                break;
 
 // Push Constant: This should push an integer constant onto the stack.
-        if(instruction == I_PUSHC) {
-            AWORD value = read_memory(PC++);
-            write_memory(--SP, value);
-            printf("pushing onto stack a value of: %i\n", value);
-
-            ++n_main_memory_reads;
-            ++n_main_memory_writes;
-        }
+            case I_PUSHC:
+                value = read_memory(PC++);
+                write_memory(--SP, value);
+                printf("pushing onto stack a value of: %i\n", value);
+                break;
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
-        if(instruction == I_PUSHA) {
-            // TODO: fix
-            AWORD address = read_memory(PC++);
-            AWORD value = read_memory(address);
-            write_memory(--SP, value);
-            printf("pushing onto stack a value of: %i\n", value);
-
-            n_main_memory_reads += 2;
-            ++n_main_memory_writes;
-        }
+            case I_PUSHA:
+                // TODO: fix
+                address = read_memory(PC++);
+                value = read_memory(address);
+                write_memory(--SP, value);
+                printf("pushing onto stack a value of: %i\n", value);
+                break;
 
 // Push Relative: Push the integer in the next word, which specifies an address that is the frame pointer + offset.
-        if(instruction == I_PUSHR) {
-            write_memory(SP--, read_memory(FP + read_memory(PC++)));
-        }
+            case I_PUSHR:
+                write_memory(SP--, read_memory(FP + read_memory(PC++)));
+                break;
 
 // Pop Absolute: Pop the integer in the address, which is specified in the word immediately after the pop declaration.
-        if(instruction  == I_POPA) {
-            write_memory(read_memory(PC++), 0);
-        }
+            case I_POPA:
+                write_memory(read_memory(PC++), 0);
+                break;
 
 // Pop Relative: Pop the integer in the next word, which specifies an address that is the frame pointer + offset.
-        if(instruction == I_POPR) {
-            write_memory(FP + read_memory(PC++), 0);
+            case I_POPR:
+                write_memory(FP + read_memory(PC++), 0);
+                break;
+
+            //default: continue;
         }
-
     }
-
-    // DEBUG: print TOS
-    printf("Exit status (TOS): %i\n", read_memory(SP));
 
 //  THE RESULT OF EXECUTING THE INSTRUCTIONS IS FOUND ON THE TOP-OF-STACK
     return read_memory(SP);
@@ -337,6 +323,10 @@ int main(int argc, char *argv[])
     int result = execute_stackmachine();
 
     report_statistics();
+
+// DEBUG: print TOS
+    printf("\nExit code: %i\n", result);
+///////////////////
 
     return result;          // or  exit(result);
 }
