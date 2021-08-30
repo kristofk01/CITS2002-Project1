@@ -1,3 +1,15 @@
+//  Changes: - Added 1 AWORD and 2 IWORD variables to deal with stuff in I_POPR and I_POPA. 
+//           - Also made some changes to I_POPR and I_POPA THAT HAVE NOT BEEN TESTED. 
+//             (Honestly still not 100% certain of the wording from the instruction set)
+//           - Slapped my forehead and added SP++ to I_JEQ and I_PRINTI 
+//             (Because we just popped stuff from TOS and we now want to point to the previous TOS)
+//           - Added some printf statements that give some more stats to what is being pushed/popped to/from where for some of the push and pop statements.
+
+//  Misc. Comments: - I don't see anything outright wrong with the I_PUSHA calls? They seem to be pushing from the right address to the right position on 
+//                    the stack (Tested using globals.coolexe)
+//                  - Yeah the local variable declaration outside the switch statements look good.
+//                  - Return is kind of melting my brain a bit so gonna take a look at it later lol.
+
 //  CITS2002 Project 1 2021
 //  Name(s):             Daniel Ling   , Kristof Kovacs
 //  Student number(s):   22896002 , 22869854
@@ -146,6 +158,10 @@ int execute_stackmachine(void)
     AWORD address;
     AWORD returnVal;
     IWORD value;
+    
+// These three are relevant to POPR and POPA. I figured out the instructions' wording. -Dan
+    IWORD FP_offset, TOS_offset;
+    AWORD popped_address;
 
     DEBUG_print_memory(15);
     while(true) {
@@ -170,7 +186,9 @@ int execute_stackmachine(void)
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
             case I_ADD:
-                value1 = read_memory(SP++);
+                value1 = read_memory(SP);
+                write_memory(SP++, 0);
+                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 + value2);
                 printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
@@ -178,7 +196,9 @@ int execute_stackmachine(void)
 
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
             case I_SUB:
-                value1 = read_memory(SP++);
+                value1 = read_memory(SP);
+                write_memory(SP++, 0);
+                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 - value2);
                 printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
@@ -186,7 +206,9 @@ int execute_stackmachine(void)
 
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
             case I_MULT:
-                value1 = read_memory(SP++);
+                value1 = read_memory(SP);
+                write_memory(SP++, 0);
+                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 * value2);
                 printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
@@ -194,7 +216,9 @@ int execute_stackmachine(void)
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
             case I_DIV:
-                value1 = read_memory(SP++);
+                value1 = read_memory(SP);
+                write_memory(SP++, 0);
+                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 / value2);
                 printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
@@ -229,7 +253,7 @@ int execute_stackmachine(void)
 // Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
             case I_JEQ:
                 value = read_memory(SP);
-                write_memory(SP, 0);
+                write_memory(SP++, 0);
 
                 if(value == 0)
                     PC = read_memory(PC);
@@ -238,7 +262,7 @@ int execute_stackmachine(void)
 // Print integer: Value at TOS popped and printed to stdout.
             case I_PRINTI:
                 printf("%u \n", SP);
-                write_memory(SP, 0);
+                write_memory(SP++, 0);
                 break;
 
 // Print String: Print the next NULL-byte terminated character string. WIP
@@ -263,17 +287,27 @@ int execute_stackmachine(void)
 
 // Push Relative: Push the integer in the next word, which specifies an address that is the frame pointer + offset.
             case I_PUSHR:
-                write_memory(SP--, read_memory(FP + read_memory(PC++)));
+                address = read_memory(PC++) + FP;
+                value = read_memory(address);
+                write_memory(--SP, value);
+                printf("push relative operation, value of %i from address %i. \n", value, address);
                 break;
 
-// Pop Absolute: Pop the integer in the address, which is specified in the word immediately after the pop declaration.
+// Pop Absolute: A value from the TOS is popped. The next word provides the address to the offset from the TOS.
             case I_POPA:
-                write_memory(read_memory(PC++), 0);
+                address = read_memory(PC++);
+                TOS_offset = read_memory(address);
+                popped_address = TOS_offset + SP;
+                write_memory(popped_address, 0);
                 break;
 
-// Pop Relative: Pop the integer in the next word, which specifies an address that is the frame pointer + offset.
+// Pop Relative: A value from the TOS is popped. The next word provides the offset added to the FP, which provides an address to the offset from the TOS popped.
             case I_POPR:
-                write_memory(FP + read_memory(PC++), 0);
+                FP_offset = read_memory(PC++);
+                TOS_offset = read_memory(FP + FP_offset);
+                popped_address = TOS_offset + SP;
+                write_memory(popped_address, 0);
+                printf("FP offset was %i, FP was %i, TOS offset was %i, popped address was %i \n", FP_offset, FP, TOS_offset, popped_address);
                 break;
 
             //default: continue;
