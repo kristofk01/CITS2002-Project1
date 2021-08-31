@@ -1,15 +1,3 @@
-//  Changes: - Added 1 AWORD and 2 IWORD variables to deal with stuff in I_POPR and I_POPA. 
-//           - Also made some changes to I_POPR and I_POPA THAT HAVE NOT BEEN TESTED. 
-//             (Honestly still not 100% certain of the wording from the instruction set)
-//           - Slapped my forehead and added SP++ to I_JEQ and I_PRINTI 
-//             (Because we just popped stuff from TOS and we now want to point to the previous TOS)
-//           - Added some printf statements that give some more stats to what is being pushed/popped to/from where for some of the push and pop statements.
-
-//  Misc. Comments: - I don't see anything outright wrong with the I_PUSHA calls? They seem to be pushing from the right address to the right position on 
-//                    the stack (Tested using globals.coolexe)
-//                  - Yeah the local variable declaration outside the switch statements look good.
-//                  - Return is kind of melting my brain a bit so gonna take a look at it later lol.
-
 //  CITS2002 Project 1 2021
 //  Name(s):             Daniel Ling   , Kristof Kovacs
 //  Student number(s):   22896002 , 22869854
@@ -163,7 +151,7 @@ int execute_stackmachine(void)
     IWORD FP_offset, TOS_offset;
     AWORD popped_address;
 
-    DEBUG_print_memory(15);
+//    DEBUG_print_memory(15);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -182,12 +170,11 @@ int execute_stackmachine(void)
         {
 // No operation: PC advanced to the next instruction.
             case I_NOP:
-                continue;
+                break;
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
             case I_ADD:
-                value1 = read_memory(SP);
-                write_memory(SP++, 0);
+                value1 = read_memory(SP++);
                 
                 value2 = read_memory(SP);
                 write_memory(SP, value1 + value2);
@@ -196,8 +183,7 @@ int execute_stackmachine(void)
 
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
             case I_SUB:
-                value1 = read_memory(SP);
-                write_memory(SP++, 0);
+                value1 = read_memory(SP++);
                 
                 value2 = read_memory(SP);
                 write_memory(SP, value1 - value2);
@@ -206,8 +192,7 @@ int execute_stackmachine(void)
 
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
             case I_MULT:
-                value1 = read_memory(SP);
-                write_memory(SP++, 0);
+                value1 = read_memory(SP++);
                 
                 value2 = read_memory(SP);
                 write_memory(SP, value1 * value2);
@@ -216,8 +201,7 @@ int execute_stackmachine(void)
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
             case I_DIV:
-                value1 = read_memory(SP);
-                write_memory(SP++, 0);
+                value1 = read_memory(SP++);
                 
                 value2 = read_memory(SP);
                 write_memory(SP, value1 / value2);
@@ -227,8 +211,12 @@ int execute_stackmachine(void)
 // Call: WIP
             case I_CALL:
                 address = read_memory(PC++);
-                FP = PC;
+                write_memory(PC, PC);
                 PC = address;
+                
+                write_memory(FP, PC);
+                FP = SP;
+                
                 printf("calling function at address: %i\n", address);
                 break;
 
@@ -237,12 +225,18 @@ int execute_stackmachine(void)
                 returnVal = read_memory(SP);
                 printf("return from function with value: %i\n", returnVal);
 
-                PC = FP;
+                address = FP + read_memory(PC);  //I'm pretty sure this is where the return value should be copied to -Dan
+
+                // PC = FP;
                 // return.cool says on the coolc website: 
                 //      "return value (on TOS) to be copied to FP+1"
                 // but i feel like i'm doing something wrong here:
-                write_memory(SP, returnVal);   // write returnVal to TOS
-                write_memory(FP+1, returnVal); // write returnVal to FP+1
+
+                // Reading through the instruction set, the exact line says "returned value should be copied before 
+                // the function returns -to the location of FP + value of the current function's stack frame." - Dan
+
+                //write_memory(SP, returnVal);  This is redundant -Dan
+                write_memory(address, returnVal); // write returnVal to the specified address/
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
@@ -267,6 +261,8 @@ int execute_stackmachine(void)
 
 // Print String: Print the next NULL-byte terminated character string. WIP
             case I_PRINTS:
+                address = read_memory(PC++);
+                printf("%u I have no idea what this is supposed to be \n", address);
                 break;
 
 // Push Constant: This should push an integer constant onto the stack.
@@ -329,8 +325,7 @@ void read_coolexe_file(char filename[])
     FILE *file = fopen(filename, "rb");
     if(file)
     {
-        n_main_memory_writes += fread(main_memory, sizeof(AWORD),
-                                      N_MAIN_MEMORY_WORDS, file);
+        fread(main_memory, sizeof(AWORD), N_MAIN_MEMORY_WORDS, file);
         fclose(file);
     }
     else
