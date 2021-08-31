@@ -151,7 +151,7 @@ int execute_stackmachine(void)
     IWORD FP_offset, TOS_offset;
     AWORD popped_address;
 
-    DEBUG_print_memory(15);
+//    DEBUG_print_memory(15);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -170,7 +170,7 @@ int execute_stackmachine(void)
         {
 // No operation: PC advanced to the next instruction.
             case I_NOP:
-                continue;
+                break;
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
             case I_ADD:
@@ -211,8 +211,12 @@ int execute_stackmachine(void)
 // Call: WIP
             case I_CALL:
                 address = read_memory(PC++);
-                FP = PC;
+                write_memory(PC, PC);
                 PC = address;
+                
+                write_memory(FP, PC);
+                FP = SP;
+                
                 printf("calling function at address: %i\n", address);
                 break;
 
@@ -221,7 +225,7 @@ int execute_stackmachine(void)
                 returnVal = read_memory(SP);
                 printf("return from function with value: %i\n", returnVal);
 
-                address = FP + read_memory(SP);  //I'm pretty sure this is where the return value should be copied to -Dan
+                address = FP + read_memory(PC);  //I'm pretty sure this is where the return value should be copied to -Dan
 
                 // PC = FP;
                 // return.cool says on the coolc website: 
@@ -321,8 +325,7 @@ void read_coolexe_file(char filename[])
     FILE *file = fopen(filename, "rb");
     if(file)
     {
-        n_main_memory_writes += fread(main_memory, sizeof(AWORD),
-                                      N_MAIN_MEMORY_WORDS, file);
+        fread(main_memory, sizeof(AWORD), N_MAIN_MEMORY_WORDS, file);
         fclose(file);
     }
     else
