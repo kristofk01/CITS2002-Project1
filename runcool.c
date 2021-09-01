@@ -147,15 +147,11 @@ int execute_stackmachine(void)
     AWORD returnVal;
     IWORD value;
     
-// These three are relevant to POPR and POPA. I figured out the instructions' wording. -Dan
-    IWORD FP_offset, TOS_offset;
-    AWORD popped_address;
-
 //    DEBUG_print_memory(15);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
-        IWORD instruction   = read_memory(PC);
+        IWORD instruction = read_memory(PC);
         ++PC;
 
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
@@ -245,16 +241,13 @@ int execute_stackmachine(void)
 // Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
             case I_JEQ:
                 value = read_memory(SP);
-                write_memory(SP++, 0);
 
-                if(value == 0)
-                    PC = read_memory(PC);
+                if(value == 0) PC = read_memory(PC);
                 break;
 
 // Print integer: Value at TOS popped and printed to stdout.
             case I_PRINTI:
                 printf("%u \n", SP);
-                write_memory(SP++, 0);
                 break;
 
 // Print String: Print the next NULL-byte terminated character string. WIP
@@ -290,18 +283,15 @@ int execute_stackmachine(void)
 // Pop Absolute: A value from the TOS is popped. The next word provides the address to the offset from the TOS.
             case I_POPA:
                 address = read_memory(PC++);
-                TOS_offset = read_memory(address);
-                popped_address = TOS_offset + SP;
-                write_memory(popped_address, 0);
+                value = read_memory(SP++);
+                write_memory(address, value);
                 break;
 
 // Pop Relative: A value from the TOS is popped. The next word provides the offset added to the FP, which provides an address to the offset from the TOS popped.
             case I_POPR:
-                FP_offset = read_memory(PC++);
-                TOS_offset = read_memory(FP + FP_offset);
-                popped_address = TOS_offset + SP;
-                write_memory(popped_address, 0);
-                printf("FP offset was %i, FP was %i, TOS offset was %i, popped address was %i \n", FP_offset, FP, TOS_offset, popped_address);
+                address = read_memory(PC++) + FP;
+                value = read_memory(SP++);
+                write_memory(address, value);
                 break;
 
             //default: continue;
