@@ -119,15 +119,15 @@ void DEBUG_print_memory(int n)
 }
 
 // Prints n elements of the stack
-void DEBUG_print_tos(int n)
+void DEBUG_print_tos(int n, int SP)
 {
     int k = N_MAIN_MEMORY_WORDS;
-    printf("\nTOS: (address: value)\n");
+    printf("\nStack -> address: value\n\t");
     for(int i = k; i > (k - n); --i)
     {
         printf("%i: %i, ", i, main_memory[i]);
     }
-    printf("\n\n");
+    printf("\nTOS -> %i: %i\n\n", SP, main_memory[SP]);
 }
 
 //  -------------------------------------------------------------------
@@ -160,7 +160,7 @@ int execute_stackmachine(void)
 
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
 //        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-//        DEBUG_print_tos(4);
+        DEBUG_print_tos(6, SP);
 
         if(instruction == I_HALT) {
             break;
@@ -175,7 +175,6 @@ int execute_stackmachine(void)
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
             case I_ADD:
                 value1 = read_memory(SP++);
-                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 + value2);
                 printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
@@ -184,7 +183,6 @@ int execute_stackmachine(void)
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
             case I_SUB:
                 value1 = read_memory(SP++);
-                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 - value2);
                 printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
@@ -193,7 +191,6 @@ int execute_stackmachine(void)
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
             case I_MULT:
                 value1 = read_memory(SP++);
-                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 * value2);
                 printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
@@ -202,19 +199,20 @@ int execute_stackmachine(void)
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
             case I_DIV:
                 value1 = read_memory(SP++);
-                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 / value2);
                 printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
                 break;
 
-// Call: WIP
+// Call: Move PC to the next instruction to be executed, and set FP as required.
             case I_CALL:
                 address = read_memory(PC++);
-                write_memory(PC, PC);
+                // save the address of the next instruction onto the stack
+                write_memory(--SP, PC);
                 PC = address;
                 
-                write_memory(FP, PC);
+                // save the current value of FP onto the stack
+                write_memory(--SP, FP);
                 FP = SP;
                 
                 printf("calling function at address: %i\n", address);
