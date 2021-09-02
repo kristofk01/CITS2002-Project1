@@ -1,3 +1,11 @@
+//  Tests from: https://secure.csse.uwa.edu.au/run/coolc?p=np&demo=basic.cool
+
+//  Works for basic.cool, emptystatement.cool, return.cool, arithmetic.cool, globals.cool
+//  DOES NOT WORK for parameters.cool, locals.cool, nestedloops.cool
+
+//  Have not tested the rest yet.
+
+
 //  CITS2002 Project 1 2021
 //  Name(s):             Daniel Ling   , Kristof Kovacs
 //  Student number(s):   22896002 , 22869854
@@ -202,10 +210,10 @@ int execute_stackmachine(void)
 
 // Call: Move PC to the next instruction to be executed, and set FP as required.
             case I_CALL:
-                address = read_memory(PC++);
+
                 // save the address of the next instruction onto the stack
-                write_memory(--SP, PC);
-                PC = address;
+                write_memory(--SP, PC + 1);
+                PC = read_memory(PC);
                 
                 // save the current value of FP onto the stack
                 write_memory(--SP, FP);
@@ -221,16 +229,9 @@ int execute_stackmachine(void)
 
                 address = FP + read_memory(PC);  //I'm pretty sure this is where the return value should be copied to -Dan
 
-                // PC = FP;
-                // return.cool says on the coolc website: 
-                //      "return value (on TOS) to be copied to FP+1"
-                // but i feel like i'm doing something wrong here:
-
-                // Reading through the instruction set, the exact line says "returned value should be copied before 
-                // the function returns -to the location of FP + value of the current function's stack frame." - Dan
-
-                //write_memory(SP, returnVal);  This is redundant -Dan
                 write_memory(address, returnVal); // write returnVal to the specified address/
+                
+                read_memory(++SP); //This probably(LOL) holds the value to the next set of instructions to execute.-Dan
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
