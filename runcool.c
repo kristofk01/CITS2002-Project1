@@ -119,15 +119,15 @@ void DEBUG_print_memory(int n)
 }
 
 // Prints n elements of the stack
-void DEBUG_print_tos(int n)
+void DEBUG_print_tos(int n, int SP)
 {
     int k = N_MAIN_MEMORY_WORDS;
-    printf("\nTOS: (address: value)\n");
+    printf("\nStack -> address: value\n\t");
     for(int i = k; i > (k - n); --i)
     {
         printf("%i: %i, ", i, main_memory[i]);
     }
-    printf("\n\n");
+    printf("\nTOS -> %i: %i\n\n", SP, main_memory[SP]);
 }
 
 //  -------------------------------------------------------------------
@@ -147,20 +147,16 @@ int execute_stackmachine(void)
     AWORD returnVal;
     IWORD value;
     
-// These three are relevant to POPR and POPA. I figured out the instructions' wording. -Dan
-    IWORD FP_offset, TOS_offset;
-    AWORD popped_address;
-
 //    DEBUG_print_memory(15);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
-        IWORD instruction   = read_memory(PC);
+        IWORD instruction = read_memory(PC);
         ++PC;
 
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
 //        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-//        DEBUG_print_tos(4);
+        DEBUG_print_tos(6, SP);
 
         if(instruction == I_HALT) {
             break;
@@ -175,7 +171,6 @@ int execute_stackmachine(void)
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
             case I_ADD:
                 value1 = read_memory(SP++);
-                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 + value2);
                 printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
@@ -184,7 +179,6 @@ int execute_stackmachine(void)
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
             case I_SUB:
                 value1 = read_memory(SP++);
-                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 - value2);
                 printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
@@ -193,7 +187,6 @@ int execute_stackmachine(void)
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
             case I_MULT:
                 value1 = read_memory(SP++);
-                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 * value2);
                 printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
@@ -202,19 +195,20 @@ int execute_stackmachine(void)
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
             case I_DIV:
                 value1 = read_memory(SP++);
-                
                 value2 = read_memory(SP);
                 write_memory(SP, value1 / value2);
                 printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
                 break;
 
-// Call: WIP
+// Call: Move PC to the next instruction to be executed, and set FP as required.
             case I_CALL:
-                address = read_memory(PC++);
-                write_memory(PC, PC);
-                PC = address;
+
+                // save the address of the next instruction onto the stack
+                write_memory(--SP, PC + 1);
+                PC = read_memory(PC);
                 
-                write_memory(FP, PC);
+                // save the current value of FP onto the stack
+                write_memory(--SP, FP);
                 FP = SP;
                 
                 printf("calling function at address: %i\n", address);
@@ -225,18 +219,13 @@ int execute_stackmachine(void)
                 returnVal = read_memory(SP);
                 printf("return from function with value: %i\n", returnVal);
 
+                PC = read_memory(SP + 1); //This thing is causing me so much grief but I'm pretty sure it's necessary. 
+                                          //On the bright side at least locals.coolexe terminates, even if it's wrong. -Dan
+                
                 address = FP + read_memory(PC);  //I'm pretty sure this is where the return value should be copied to -Dan
 
-                // PC = FP;
-                // return.cool says on the coolc website: 
-                //      "return value (on TOS) to be copied to FP+1"
-                // but i feel like i'm doing something wrong here:
-
-                // Reading through the instruction set, the exact line says "returned value should be copied before 
-                // the function returns -to the location of FP + value of the current function's stack frame." - Dan
-
-                //write_memory(SP, returnVal);  This is redundant -Dan
                 write_memory(address, returnVal); // write returnVal to the specified address/
+                
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
@@ -246,17 +235,14 @@ int execute_stackmachine(void)
 
 // Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
             case I_JEQ:
-                value = read_memory(SP);
-                write_memory(SP++, 0);
+                value = read_memory(SP++);
 
-                if(value == 0)
-                    PC = read_memory(PC);
+                if(value == 0) PC = read_memory(PC);
                 break;
 
 // Print integer: Value at TOS popped and printed to stdout.
             case I_PRINTI:
-                printf("%u \n", SP);
-                write_memory(SP++, 0);
+                printf("%u \n", SP++);
                 break;
 
 // Print String: Print the next NULL-byte terminated character string. WIP
@@ -292,18 +278,15 @@ int execute_stackmachine(void)
 // Pop Absolute: A value from the TOS is popped. The next word provides the address to the offset from the TOS.
             case I_POPA:
                 address = read_memory(PC++);
-                TOS_offset = read_memory(address);
-                popped_address = TOS_offset + SP;
-                write_memory(popped_address, 0);
+                value = read_memory(SP++);
+                write_memory(address, value);
                 break;
 
 // Pop Relative: A value from the TOS is popped. The next word provides the offset added to the FP, which provides an address to the offset from the TOS popped.
             case I_POPR:
-                FP_offset = read_memory(PC++);
-                TOS_offset = read_memory(FP + FP_offset);
-                popped_address = TOS_offset + SP;
-                write_memory(popped_address, 0);
-                printf("FP offset was %i, FP was %i, TOS offset was %i, popped address was %i \n", FP_offset, FP, TOS_offset, popped_address);
+                address = read_memory(PC++) + FP;
+                value = read_memory(SP++);
+                write_memory(address, value);
                 break;
 
             //default: continue;
