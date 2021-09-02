@@ -240,14 +240,14 @@ int execute_stackmachine(void)
 
 // Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
             case I_JEQ:
-                value = read_memory(SP);
+                value = read_memory(SP++);
 
                 if(value == 0) PC = read_memory(PC);
                 break;
 
 // Print integer: Value at TOS popped and printed to stdout.
             case I_PRINTI:
-                printf("%u \n", SP);
+                printf("%u \n", SP++);
                 break;
 
 // Print String: Print the next NULL-byte terminated character string. WIP
