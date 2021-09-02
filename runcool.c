@@ -1,11 +1,3 @@
-//  Tests from: https://secure.csse.uwa.edu.au/run/coolc?p=np&demo=basic.cool
-
-//  Works for basic.cool, emptystatement.cool, return.cool, arithmetic.cool, globals.cool
-//  DOES NOT WORK for parameters.cool, locals.cool, nestedloops.cool
-
-//  Have not tested the rest yet.
-
-
 //  CITS2002 Project 1 2021
 //  Name(s):             Daniel Ling   , Kristof Kovacs
 //  Student number(s):   22896002 , 22869854
@@ -231,7 +223,6 @@ int execute_stackmachine(void)
 
                 write_memory(address, returnVal); // write returnVal to the specified address/
                 
-                read_memory(++SP); //This probably(LOL) holds the value to the next set of instructions to execute.-Dan
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
