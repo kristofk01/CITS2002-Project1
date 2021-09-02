@@ -142,10 +142,9 @@ int execute_stackmachine(void)
 
 // Since we can't declare new variables inside each case in the switch statement,
 // is this the best solution?
-    IWORD value1, value2;
     AWORD address;
     AWORD returnVal;
-    IWORD value;
+    IWORD value, value2;
     
 //    DEBUG_print_memory(15);
     while(true) {
@@ -170,34 +169,34 @@ int execute_stackmachine(void)
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
             case I_ADD:
-                value1 = read_memory(SP++);
+                value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value1 + value2);
-                printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
+                write_memory(SP, value + value2);
+                printf("Arithmetic I_ADD: %i + %i\n", value, value2);
                 break;
 
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
             case I_SUB:
-                value1 = read_memory(SP++);
+                value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value1 - value2);
-                printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
+                write_memory(SP, value - value2);
+                printf("Arithmetic I_SUB: %i - %i\n", value, value2);
                 break;
 
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
             case I_MULT:
-                value1 = read_memory(SP++);
+                value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value1 * value2);
-                printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
+                write_memory(SP, value * value2);
+                printf("Arithmetic I_MULT: %i * %i\n", value, value2);
                 break;
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
             case I_DIV:
-                value1 = read_memory(SP++);
+                value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value1 / value2);
-                printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
+                write_memory(SP, value / value2);
+                printf("Arithmetic I_DIV: %i / %i\n", value, value2);
                 break;
 
 // Call: Move PC to the next instruction to be executed, and set FP as required.
@@ -219,9 +218,10 @@ int execute_stackmachine(void)
                 returnVal = read_memory(SP);
                 printf("return from function with value: %i\n", returnVal);
 
-                PC = read_memory(SP + 1); //This thing is causing me so much grief but I'm pretty sure it's necessary. 
+                //PC = read_memory(SP + 1); //This thing is causing me so much grief but I'm pretty sure it's necessary. 
                                           //On the bright side at least locals.coolexe terminates, even if it's wrong. -Dan
-                
+                PC = read_memory(FP+1);
+
                 address = FP + read_memory(PC);  //I'm pretty sure this is where the return value should be copied to -Dan
 
                 write_memory(address, returnVal); // write returnVal to the specified address/
@@ -260,7 +260,6 @@ int execute_stackmachine(void)
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
             case I_PUSHA:
-                // TODO: fix
                 address = read_memory(PC++);
                 value = read_memory(address);
                 write_memory(--SP, value);
