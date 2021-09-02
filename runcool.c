@@ -219,6 +219,9 @@ int execute_stackmachine(void)
                 returnVal = read_memory(SP);
                 printf("return from function with value: %i\n", returnVal);
 
+                PC = read_memory(SP + 1); //This thing is causing me so much grief but I'm pretty sure it's necessary. 
+                                          //On the bright side at least locals.coolexe terminates, even if it's wrong. -Dan
+                
                 address = FP + read_memory(PC);  //I'm pretty sure this is where the return value should be copied to -Dan
 
                 write_memory(address, returnVal); // write returnVal to the specified address/
