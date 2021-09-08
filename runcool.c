@@ -171,32 +171,32 @@ int execute_stackmachine(void)
             case I_ADD:
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value + value2);
-                printf("Arithmetic I_ADD: %i + %i\n", value, value2);
+                write_memory(SP, value2 + value);
+                printf("Arithmetic I_ADD: %i + %i\n", value2, value);
                 break;
 
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
             case I_SUB:
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value - value2);
-                printf("Arithmetic I_SUB: %i - %i\n", value, value2);
+                write_memory(SP, value2 - value);
+                printf("Arithmetic I_SUB: %i - %i\n", value2, value);
                 break;
 
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
             case I_MULT:
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value * value2);
-                printf("Arithmetic I_MULT: %i * %i\n", value, value2);
+                write_memory(SP, value2 * value);
+                printf("Arithmetic I_MULT: %i * %i\n", value2, value);
                 break;
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
             case I_DIV:
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value / value2);
-                printf("Arithmetic I_DIV: %i / %i\n", value, value2);
+                write_memory(SP, value2 / value);
+                printf("Arithmetic I_DIV: %i / %i\n", value2, value);
                 break;
 
 // Call: Move PC to the next instruction to be executed, and set FP as required.
@@ -211,7 +211,9 @@ int execute_stackmachine(void)
                 // move PC to the first instruction of the function we are calling
                 PC = read_memory(PC);
 
-                printf("calling function at address: %i\n", address);
+                printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
+
+                printf("calling function at address: %i\n", PC);
                 break;
 
 // Return: WIP
@@ -219,20 +221,21 @@ int execute_stackmachine(void)
                 DEBUG_print_tos(5, SP);
                 printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
 
-                // read return value from TOS
-                returnVal = read_memory(SP);
-                //I'm pretty sure this is where the return value should be copied to -Dan
+                // read and save return value from TOS
+
+                /* THIS IS 100% WHERE THE ISSUE IS */
                 address = FP + read_memory(PC);
+                /* * * */
+
+                returnVal = read_memory(SP);
+                write_memory(address, returnVal);
                 printf("returnVal is copied to addrs: %i\n", address);
 
-                // write returnVal to the specified address
-                write_memory(address, returnVal); 
-
                 // move PC back to the address following the function call
-                PC = read_memory(FP + 1);
+                PC = read_memory(FP + 1) + returnVal;
+                printf("next instr address: %i\n", PC);
 
-                printf("PC: %i, FP+1: %i\n", PC, FP + 1);
-                printf("NEXT INSTRUCTION: %i >> %s\n", PC, INSTRUCTION_name[read_memory(PC)]);
+                //printf("NEXT INSTRUCTION: %i >> %s\n", PC, INSTRUCTION_name[read_memory(PC)]);
                 
                 printf("return from function with value: %i\n", returnVal);
 
