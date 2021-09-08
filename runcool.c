@@ -155,7 +155,7 @@ int execute_stackmachine(void)
 
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
 //        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-        DEBUG_print_tos(6, SP);
+//        DEBUG_print_tos(6, SP);
 
         if(instruction == I_HALT) {
             break;
@@ -201,31 +201,43 @@ int execute_stackmachine(void)
 
 // Call: Move PC to the next instruction to be executed, and set FP as required.
             case I_CALL:
-
                 // save the address of the next instruction onto the stack
                 write_memory(--SP, PC + 1);
-                PC = read_memory(PC);
                 
                 // save the current value of FP onto the stack
                 write_memory(--SP, FP);
                 FP = SP;
-                
+
+                // move PC to the first instruction of the function we are calling
+                PC = read_memory(PC);
+
                 printf("calling function at address: %i\n", address);
                 break;
 
 // Return: WIP
             case I_RETURN:
+                DEBUG_print_tos(5, SP);
+                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
+
+                // read return value from TOS
                 returnVal = read_memory(SP);
+                //I'm pretty sure this is where the return value should be copied to -Dan
+                address = FP + read_memory(PC);
+                printf("returnVal is copied to addrs: %i\n", address);
+
+                // write returnVal to the specified address
+                write_memory(address, returnVal); 
+
+                // move PC back to the address following the function call
+                PC = read_memory(FP + 1);
+
+                printf("PC: %i, FP+1: %i\n", PC, FP + 1);
+                printf("NEXT INSTRUCTION: %i >> %s\n", PC, INSTRUCTION_name[read_memory(PC)]);
+                
                 printf("return from function with value: %i\n", returnVal);
 
-                //PC = read_memory(SP + 1); //This thing is causing me so much grief but I'm pretty sure it's necessary. 
-                                          //On the bright side at least locals.coolexe terminates, even if it's wrong. -Dan
-                PC = read_memory(FP+1);
+                DEBUG_print_tos(5, SP);
 
-                address = FP + read_memory(PC);  //I'm pretty sure this is where the return value should be copied to -Dan
-
-                write_memory(address, returnVal); // write returnVal to the specified address/
-                
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
@@ -287,8 +299,6 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 write_memory(address, value);
                 break;
-
-            //default: continue;
         }
     }
 
