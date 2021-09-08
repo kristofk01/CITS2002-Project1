@@ -143,7 +143,7 @@ int execute_stackmachine(void)
 // Since we can't declare new variables inside each case in the switch statement,
 // is this the best solution?
     AWORD address;
-    AWORD returnVal;
+    IWORD returnVal;
     IWORD value, value2;
     
 //    DEBUG_print_memory(15);
@@ -219,16 +219,21 @@ int execute_stackmachine(void)
                 DEBUG_print_tos(5, SP);
                 printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
 
-                // read and save return value from TOS
+                // read return value from TOS and write to FP-offset
+
+                // this bit is a mess
                 returnVal = read_memory(SP);
-                address = read_memory(PC);
+                // address should be the top of the calling functions stack?? how?
+                address = read_memory(FP + 1) + returnVal;
                 write_memory(address, returnVal);
                 printf("returnVal is copied to addrs: %i\n", address);
+                // end^ //
 
-                // move PC back to the address following the function call
-                PC = FP + returnVal;
+                // restore PC to continue execution of the calling function
+                PC = read_memory(FP + 1);
 
                 DEBUG_print_tos(5, SP);
+                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
                 printf("return from function with value: %i\n", returnVal);
                 break;
 
