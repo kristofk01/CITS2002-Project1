@@ -77,12 +77,22 @@ int n_main_memory_writes    = 0;
 int n_cache_memory_hits     = 0;
 int n_cache_memory_misses   = 0;
 
+// TODO REMOVE
+int n_number_of_instructions   = 0;
+int n_number_of_function_calls = 0;
+///////////
+
 void report_statistics(void)
 {
     printf("@number-of-main-memory-reads\t%i\n",    n_main_memory_reads);
     printf("@number-of-main-memory-writes\t%i\n",   n_main_memory_writes);
     printf("@number-of-cache-memory-hits\t%i\n",    n_cache_memory_hits);
     printf("@number-of-cache-memory-misses\t%i\n",  n_cache_memory_misses);
+
+    // TODO REMOVE
+    printf("\n@number-of-instructions\t\t%i\n", n_number_of_instructions);
+    printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
+    /////////
 }
 
 //  -------------------------------------------------------------------
@@ -142,10 +152,9 @@ int execute_stackmachine(void)
 
 // Since we can't declare new variables inside each case in the switch statement,
 // is this the best solution?
-    IWORD value1, value2;
     AWORD address;
-    AWORD returnVal;
-    IWORD value;
+    IWORD returnVal;
+    IWORD value, value2;
     
 //    DEBUG_print_memory(15);
     while(true) {
@@ -154,9 +163,11 @@ int execute_stackmachine(void)
         IWORD instruction = read_memory(PC);
         ++PC;
 
+        ++n_number_of_instructions;
+
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
 //        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-        DEBUG_print_tos(6, SP);
+//        DEBUG_print_tos(6, SP);
 
         if(instruction == I_HALT) {
             break;
@@ -170,62 +181,74 @@ int execute_stackmachine(void)
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
             case I_ADD:
-                value1 = read_memory(SP++);
+                value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value1 + value2);
-                printf("Arithmetic I_ADD: %i + %i\n", value1, value2);
+                write_memory(SP, value2 + value);
+                printf("Arithmetic I_ADD: %i + %i\n", value2, value);
                 break;
 
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
             case I_SUB:
-                value1 = read_memory(SP++);
+                value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value1 - value2);
-                printf("Arithmetic I_SUB: %i - %i\n", value1, value2);
+                write_memory(SP, value2 - value);
+                printf("Arithmetic I_SUB: %i - %i\n", value2, value);
                 break;
 
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
             case I_MULT:
-                value1 = read_memory(SP++);
+                value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value1 * value2);
-                printf("Arithmetic I_MULT: %i * %i\n", value1, value2);
+                write_memory(SP, value2 * value);
+                printf("Arithmetic I_MULT: %i * %i\n", value2, value);
                 break;
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
             case I_DIV:
-                value1 = read_memory(SP++);
+                value = read_memory(SP++);
                 value2 = read_memory(SP);
-                write_memory(SP, value1 / value2);
-                printf("Arithmetic I_DIV: %i / %i\n", value1, value2);
+                write_memory(SP, value2 / value);
+                printf("Arithmetic I_DIV: %i / %i\n", value2, value);
                 break;
 
 // Call: Move PC to the next instruction to be executed, and set FP as required.
             case I_CALL:
-
+                ++n_number_of_function_calls;
                 // save the address of the next instruction onto the stack
                 write_memory(--SP, PC + 1);
-                PC = read_memory(PC);
                 
                 // save the current value of FP onto the stack
                 write_memory(--SP, FP);
                 FP = SP;
-                
-                printf("calling function at address: %i\n", address);
+
+                // move PC to the first instruction of the function we are calling
+                PC = read_memory(PC);
+
+                printf("calling function at address: %i\n", PC);
                 break;
 
 // Return: WIP
             case I_RETURN:
+                DEBUG_print_tos(5, SP);
+                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
+
+                // read return value from TOS
+                address = FP + read_memory(PC);
                 returnVal = read_memory(SP);
+
+                // restore PC to continue execution of the calling function
+                PC = read_memory(address);
+                // restore FP
+                FP = read_memory(FP);
+
+                // write return value to FP-offset
+                write_memory(address, returnVal);
+
+                printf("addrs: %i, val: %i\n", address, returnVal);
+
+                DEBUG_print_tos(5, SP);
+                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
                 printf("return from function with value: %i\n", returnVal);
-
-                PC = read_memory(SP + 1); //This thing is causing me so much grief but I'm pretty sure it's necessary. 
-                                          //On the bright side at least locals.coolexe terminates, even if it's wrong. -Dan
-                
-                address = FP + read_memory(PC);  //I'm pretty sure this is where the return value should be copied to -Dan
-
-                write_memory(address, returnVal); // write returnVal to the specified address/
-                
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
@@ -260,7 +283,6 @@ int execute_stackmachine(void)
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
             case I_PUSHA:
-                // TODO: fix
                 address = read_memory(PC++);
                 value = read_memory(address);
                 write_memory(--SP, value);
@@ -288,8 +310,6 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 write_memory(address, value);
                 break;
-
-            //default: continue;
         }
     }
 
