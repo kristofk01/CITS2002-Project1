@@ -211,8 +211,6 @@ int execute_stackmachine(void)
                 // move PC to the first instruction of the function we are calling
                 PC = read_memory(PC);
 
-                printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-
                 printf("calling function at address: %i\n", PC);
                 break;
 
@@ -222,25 +220,16 @@ int execute_stackmachine(void)
                 printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
 
                 // read and save return value from TOS
-
-                /* THIS IS 100% WHERE THE ISSUE IS */
-                address = FP + read_memory(PC);
-                /* * * */
-
                 returnVal = read_memory(SP);
+                address = read_memory(PC);
                 write_memory(address, returnVal);
                 printf("returnVal is copied to addrs: %i\n", address);
 
                 // move PC back to the address following the function call
-                PC = read_memory(FP + 1) + returnVal;
-                printf("next instr address: %i\n", PC);
-
-                //printf("NEXT INSTRUCTION: %i >> %s\n", PC, INSTRUCTION_name[read_memory(PC)]);
-                
-                printf("return from function with value: %i\n", returnVal);
+                PC = FP + returnVal;
 
                 DEBUG_print_tos(5, SP);
-
+                printf("return from function with value: %i\n", returnVal);
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
