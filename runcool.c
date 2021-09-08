@@ -77,12 +77,22 @@ int n_main_memory_writes    = 0;
 int n_cache_memory_hits     = 0;
 int n_cache_memory_misses   = 0;
 
+// TODO REMOVE
+int n_number_of_instructions   = 0;
+int n_number_of_function_calls = 0;
+///////////
+
 void report_statistics(void)
 {
     printf("@number-of-main-memory-reads\t%i\n",    n_main_memory_reads);
     printf("@number-of-main-memory-writes\t%i\n",   n_main_memory_writes);
     printf("@number-of-cache-memory-hits\t%i\n",    n_cache_memory_hits);
     printf("@number-of-cache-memory-misses\t%i\n",  n_cache_memory_misses);
+
+    // TODO REMOVE
+    printf("\n@number-of-instructions\t\t%i\n", n_number_of_instructions);
+    printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
+    /////////
 }
 
 //  -------------------------------------------------------------------
@@ -153,6 +163,8 @@ int execute_stackmachine(void)
         IWORD instruction = read_memory(PC);
         ++PC;
 
+        ++n_number_of_instructions;
+
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
 //        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
 //        DEBUG_print_tos(6, SP);
@@ -201,6 +213,7 @@ int execute_stackmachine(void)
 
 // Call: Move PC to the next instruction to be executed, and set FP as required.
             case I_CALL:
+                ++n_number_of_function_calls;
                 // save the address of the next instruction onto the stack
                 write_memory(--SP, PC + 1);
                 
@@ -229,9 +242,6 @@ int execute_stackmachine(void)
                 // write return value to FP-offset
                 write_memory(address, returnVal);
                 printf("addrs: %i, val: %i\n", address, returnVal);
-
-                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
-
 
                 DEBUG_print_tos(5, SP);
                 printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
