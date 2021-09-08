@@ -238,9 +238,12 @@ int execute_stackmachine(void)
 
                 // restore PC to continue execution of the calling function
                 PC = read_memory(address);
+                // restore FP
+                FP = read_memory(FP);
 
                 // write return value to FP-offset
                 write_memory(address, returnVal);
+
                 printf("addrs: %i, val: %i\n", address, returnVal);
 
                 DEBUG_print_tos(5, SP);
