@@ -224,7 +224,7 @@ int execute_stackmachine(void)
                 // this bit is a mess
                 returnVal = read_memory(SP);
                 // address should be the top of the calling functions stack?? how?
-                address = read_memory(FP + 1) + returnVal;
+                address = read_memory(FP + read_memory(PC)) + returnVal;
                 write_memory(address, returnVal);
                 printf("returnVal is copied to addrs: %i\n", address);
                 // end^ //
