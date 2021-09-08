@@ -166,8 +166,8 @@ int execute_stackmachine(void)
         ++n_number_of_instructions;
 
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
-//        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-//        DEBUG_print_tos(6, SP);
+        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
+        DEBUG_print_tos(10, SP);
 
         if(instruction == I_HALT) {
             break;
@@ -229,16 +229,15 @@ int execute_stackmachine(void)
 
 // Return: WIP
             case I_RETURN:
-                DEBUG_print_tos(5, SP);
-                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
+                //DEBUG_print_tos(5, SP);
+                //printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
 
                 // read return value from TOS
                 address = FP + read_memory(PC);
                 returnVal = read_memory(SP);
 
-                // restore PC to continue execution of the calling function
+                // restore PC and FP to continue execution of the calling function
                 PC = read_memory(address);
-                // restore FP
                 FP = read_memory(FP);
 
                 // write return value to FP-offset
@@ -246,7 +245,7 @@ int execute_stackmachine(void)
 
                 printf("addrs: %i, val: %i\n", address, returnVal);
 
-                DEBUG_print_tos(5, SP);
+                //DEBUG_print_tos(5, SP);
                 printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
                 printf("return from function with value: %i\n", returnVal);
                 break;
