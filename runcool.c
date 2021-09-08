@@ -219,18 +219,19 @@ int execute_stackmachine(void)
                 DEBUG_print_tos(5, SP);
                 printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
 
-                // read return value from TOS and write to FP-offset
-
-                // this bit is a mess
+                // read return value from TOS
+                address = FP + read_memory(PC);
                 returnVal = read_memory(SP);
-                // address should be the top of the calling functions stack?? how?
-                address = read_memory(FP + 1) + returnVal;
-                write_memory(address, returnVal);
-                printf("returnVal is copied to addrs: %i\n", address);
-                // end^ //
 
                 // restore PC to continue execution of the calling function
-                PC = read_memory(FP + 1);
+                PC = read_memory(address);
+
+                // write return value to FP-offset
+                write_memory(address, returnVal);
+                printf("addrs: %i, val: %i\n", address, returnVal);
+
+                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
+
 
                 DEBUG_print_tos(5, SP);
                 printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
