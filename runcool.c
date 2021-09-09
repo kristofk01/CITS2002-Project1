@@ -158,7 +158,7 @@ int execute_stackmachine(void)
     IWORD returnVal;
     IWORD value, value2;
     
-    DEBUG_print_memory(27);
+    //DEBUG_print_memory(27);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -167,10 +167,10 @@ int execute_stackmachine(void)
 
         ++n_number_of_instructions;
 
-        printf("################################\n");
-        printf("\n>> %s\n", INSTRUCTION_name[instruction]);
-        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-        DEBUG_print_tos(11, SP);
+        //printf("################################\n");
+        //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
+        //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
+        //DEBUG_print_tos(11, SP);
 
         if(instruction == I_HALT) {
             break;
@@ -187,7 +187,7 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 + value);
-                printf("Arithmetic I_ADD: %i + %i\n", value2, value);
+                //printf("Arithmetic I_ADD: %i + %i\n", value2, value);
                 break;
 
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
@@ -203,7 +203,9 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 * value);
-                //printf("Arithmetic I_MULT: %i * %i\n", value2, value);
+                printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
+                DEBUG_print_tos(25, SP);
+                printf("Arithmetic I_MULT: %i * %i\n", value2, value);
                 break;
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
@@ -233,7 +235,6 @@ int execute_stackmachine(void)
 // Return: WIP
             case I_RETURN:
                 //DEBUG_print_tos(5, SP);
-                //printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
 
                 // read return value from TOS and compute FP-offset
                 address = FP + read_memory(PC);
@@ -246,11 +247,10 @@ int execute_stackmachine(void)
                 // write return value to FP-offset
                 write_memory(address, returnVal);
 
-                printf("addrs: %i, val: %i\n", address, returnVal);
-
+                //printf("addrs: %i, val: %i\n", address, returnVal);
                 //DEBUG_print_tos(5, SP);
                 //printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
-                printf("return from function with value: %i\n", returnVal);
+                //printf("return from function with value: %i\n", returnVal);
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
@@ -288,7 +288,7 @@ int execute_stackmachine(void)
             case I_PUSHC:
                 value = read_memory(PC++);
                 write_memory(--SP, value);
-                printf("pushing onto stack a value of: %i\n", value);
+                //printf("pushing onto stack a value of: %i to %i\n", value, SP);
                 break;
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
@@ -304,7 +304,7 @@ int execute_stackmachine(void)
                 address = read_memory(PC++) + FP;
                 value = read_memory(address);
                 write_memory(--SP, value);
-                printf("pushing value of %i from address %i.\n", value, address);
+                //printf("pushing value of %i from address %i.\n", value, address);
                 break;
 
 // Pop Absolute: A value from the TOS is popped. The next word provides the address to the offset from the TOS.
@@ -320,7 +320,7 @@ int execute_stackmachine(void)
                 address = read_memory(PC++) + FP;
                 value = read_memory(SP++);
                 write_memory(address, value);
-                printf("pop to address: %i, with value: %i\n", address, value);
+                //printf("pop to address: %i, with value: %i\n", address, value);
                 break;
         }
     }
