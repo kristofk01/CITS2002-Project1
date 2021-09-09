@@ -168,7 +168,7 @@ int execute_stackmachine(void)
         ++n_number_of_instructions;
 
         //printf("################################\n");
-        printf("\n>> %s\n", INSTRUCTION_name[instruction]);
+        //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
         //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
         //DEBUG_print_tos(9, SP);
 
@@ -276,9 +276,9 @@ int execute_stackmachine(void)
                 address = read_memory(PC++);
                 do {
                     valueStr = read_memory(address++);
-                    bytes[0] = valueStr >> 8;
-                    bytes[1] = valueStr & 0x00FF;
-                    fprintf(stderr, "%c%c", (AWORD)bytes[0], (AWORD)bytes[1]);
+                    bytes[0] = valueStr & 0xFF;
+                    bytes[1] = valueStr >> 8 & 0xFF;
+                    fprintf(stdout, "%c%c", bytes[0], bytes[1]);
                 } while(valueStr != '\0');
                 break;
 
