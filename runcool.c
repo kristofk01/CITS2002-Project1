@@ -153,6 +153,8 @@ int execute_stackmachine(void)
 // Since we can't declare new variables inside each case in the switch statement,
 // is this the best solution?
     AWORD address;
+    AWORD valueStr;
+    uint8_t bytes[2];
     IWORD returnVal;
     IWORD value, value2;
     
@@ -165,10 +167,10 @@ int execute_stackmachine(void)
 
         ++n_number_of_instructions;
 
-        printf("################################\n");
+        //printf("################################\n");
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
-        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-        DEBUG_print_tos(9, SP);
+        //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
+        //DEBUG_print_tos(9, SP);
 
         if(instruction == I_HALT) {
             break;
@@ -185,7 +187,7 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 + value);
-                printf("Arithmetic I_ADD: %i + %i\n", value2, value);
+                //printf("Arithmetic I_ADD: %i + %i\n", value2, value);
                 break;
 
 // Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
@@ -193,7 +195,7 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 - value);
-                printf("Arithmetic I_SUB: %i - %i\n", value2, value);
+                //printf("Arithmetic I_SUB: %i - %i\n", value2, value);
                 break;
 
 //Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
@@ -201,7 +203,7 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 * value);
-                printf("Arithmetic I_MULT: %i * %i\n", value2, value);
+                //printf("Arithmetic I_MULT: %i * %i\n", value2, value);
                 break;
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
@@ -209,7 +211,7 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 / value);
-                printf("Arithmetic I_DIV: %i / %i\n", value2, value);
+                //printf("Arithmetic I_DIV: %i / %i\n", value2, value);
                 break;
 
 // Call: Move PC to the next instruction to be executed, and set FP as required.
@@ -225,13 +227,13 @@ int execute_stackmachine(void)
                 // move PC to the first instruction of the function we are calling
                 PC = read_memory(PC);
 
-                printf("calling function at address: %i\n", PC);
+                //printf("calling function at address: %i\n", PC);
                 break;
 
 // Return: WIP
             case I_RETURN:
                 //DEBUG_print_tos(5, SP);
-                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
+                //printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
 
                 // read return value from TOS
                 address = FP + read_memory(PC);
@@ -244,41 +246,47 @@ int execute_stackmachine(void)
                 // write return value to FP-offset
                 write_memory(address, returnVal);
 
-                printf("addrs: %i, val: %i\n", address, returnVal);
+                //printf("addrs: %i, val: %i\n", address, returnVal);
 
                 //DEBUG_print_tos(5, SP);
-                printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
-                printf("return from function with value: %i\n", returnVal);
+                //printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
+                //printf("return from function with value: %i\n", returnVal);
                 break;
 
 // Unconditional jump: Flow of execution jumps to the next specified address.
             case I_JMP:
-                PC = read_memory(PC++);
+                PC = read_memory(PC);
                 break;
 
 // Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
             case I_JEQ:
                 value = read_memory(SP++);
-                if(value == 0)
-                    PC = read_memory(PC++);
+                if(value == 0) { PC = read_memory(PC); }
+                else { ++PC; }
                 break;
 
 // Print integer: Value at TOS popped and printed to stdout.
             case I_PRINTI:
-                printf("%u \n", SP++);
+                value = read_memory(SP);
+                fprintf(stdout, "%i", value);
                 break;
 
-// Print String: Print the next NULL-byte terminated character string. WIP
+// Print String: Print the next NULL-byte terminated character string. 
             case I_PRINTS:
                 address = read_memory(PC++);
-                printf("%u I have no idea what this is supposed to be \n", address);
+                do {
+                    valueStr = read_memory(address++);
+                    bytes[0] = valueStr >> 8;
+                    bytes[1] = valueStr & 0x00FF;
+                    fprintf(stderr, "%c%c", (AWORD)bytes[0], (AWORD)bytes[1]);
+                } while(valueStr != '\0');
                 break;
 
 // Push Constant: This should push an integer constant onto the stack.
             case I_PUSHC:
                 value = read_memory(PC++);
                 write_memory(--SP, value);
-                printf("pushing onto stack a value of: %i\n", value);
+                //printf("pushing onto stack a value of: %i\n", value);
                 break;
 
 // Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
@@ -286,7 +294,7 @@ int execute_stackmachine(void)
                 address = read_memory(PC++);
                 value = read_memory(address);
                 write_memory(--SP, value);
-                printf("pushing onto stack a value of %i from address %i.\n", value, address);
+                //printf("pushing onto stack a value of %i from address %i.\n", value, address);
                 break;
 
 // Push Relative: Push the integer in the next word, which specifies an address that is the frame pointer + offset.
@@ -294,7 +302,7 @@ int execute_stackmachine(void)
                 address = read_memory(PC++) + FP;
                 value = read_memory(address);
                 write_memory(--SP, value);
-                printf("pushing value of %i from address %i.\n", value, address);
+                //printf("pushing value of %i from address %i.\n", value, address);
                 break;
 
 // Pop Absolute: A value from the TOS is popped. The next word provides the address to the offset from the TOS.
@@ -302,7 +310,7 @@ int execute_stackmachine(void)
                 address = read_memory(PC++);
                 value = read_memory(SP++);
                 write_memory(address, value);
-                printf("pop to address: %i, with value: %i\n", address, value);
+                //printf("pop to address: %i, with value: %i\n", address, value);
                 break;
 
 // Pop Relative: A value from the TOS is popped. The next word provides the offset added to the FP, which provides an address to the offset from the TOS popped.
@@ -310,7 +318,7 @@ int execute_stackmachine(void)
                 address = read_memory(PC++) + FP;
                 value = read_memory(SP++);
                 write_memory(address, value);
-                printf("pop to address: %i, with value: %i\n", address, value);
+                //printf("pop to address: %i, with value: %i\n", address, value);
                 break;
         }
     }
