@@ -274,12 +274,14 @@ int execute_stackmachine(void)
 // Print String: Print the next NULL-byte terminated character string. 
             case I_PRINTS:
                 address = read_memory(PC++);
-                do {
+                while(true)
+                {
                     valueStr = read_memory(address++);
-                    bytes[0] = valueStr & 0xFF;
-                    bytes[1] = valueStr >> 8 & 0xFF;
+                    bytes[0] = valueStr & 0x00FF;
+                    bytes[1] = valueStr >> 8;
                     fprintf(stdout, "%c%c", bytes[0], bytes[1]);
-                } while(valueStr != '\0');
+                    if(bytes[0] == '\0' || bytes[1] == '\0') {break;}
+                }
                 break;
 
 // Push Constant: This should push an integer constant onto the stack.
