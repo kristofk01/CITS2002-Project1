@@ -247,7 +247,6 @@ int execute_stackmachine(void)
                 // write return value to FP-offset
                 write_memory(address, returnVal);
 
-
                 //printf("addrs: %i, val: %i\n", address, returnVal);
                 //DEBUG_print_tos(5, SP);
                 //printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
