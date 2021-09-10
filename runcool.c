@@ -203,9 +203,7 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 * value);
-                printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-                DEBUG_print_tos(25, SP);
-                printf("Arithmetic I_MULT: %i * %i\n", value2, value);
+                //printf("Arithmetic I_MULT: %i * %i\n", value2, value);
                 break;
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
@@ -267,7 +265,7 @@ int execute_stackmachine(void)
 
 // Print integer: Value at TOS popped and printed to stdout.
             case I_PRINTI:
-                value = read_memory(SP);
+                value = read_memory(SP++);
                 fprintf(stdout, "%i", value);
                 break;
 
