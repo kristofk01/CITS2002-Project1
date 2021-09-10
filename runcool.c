@@ -80,6 +80,7 @@ int n_cache_memory_misses   = 0;
 // TODO REMOVE
 int n_number_of_instructions   = 0;
 int n_number_of_function_calls = 0;
+float n_percentage_of_cache_hits = 0;
 ///////////
 
 void report_statistics(void)
@@ -92,6 +93,9 @@ void report_statistics(void)
     // TODO REMOVE
     printf("\n@number-of-instructions\t\t%i\n", n_number_of_instructions);
     printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
+
+    n_percentage_of_cache_hits = n_cache_memory_hits / n_cache_memory_misses * 100;
+    printf("@percentage-of-cache-hits\t%.1f%%\n", n_percentage_of_cache_hits);
     /////////
 }
 
@@ -103,7 +107,6 @@ void report_statistics(void)
 //  THIS WILL MAKE THINGS EASIER WHEN WHEN EXTENDING THE CODE TO
 //  SUPPORT CACHE MEMORY
 
-
 struct cache_entry
 {
     IWORD value;
@@ -113,10 +116,43 @@ struct cache_entry
 
 struct cache_entry cache_memory[N_CACHE_WORDS];
 
+void cache_init(void)
+{
+    for(int i = 0; i < N_CACHE_WORDS; ++i)
+    {
+        struct cache_entry entry = {};
+        entry.dirty = 1;
+        cache_memory[i] = entry;
+        //TODO: count this as a write statistic?
+    }
+}
+
 AWORD read_memory(int address)
 {
-    ++n_main_memory_reads;
-    return main_memory[address];
+    AWORD cache_address = address % N_CACHE_WORDS;
+    printf("cache address: %i\n", cache_address);
+    AWORD value;
+
+    if(cache_memory[cache_address].dirty)
+    {
+        value = main_memory[address];
+
+        struct cache_entry entry = {};
+        entry.address = address;
+        entry.value = value;
+        entry.dirty = 1;
+
+        cache_memory[cache_address] = entry;
+
+        ++n_main_memory_reads;
+        ++n_cache_memory_misses;
+    }
+    else
+    {
+        ++n_cache_memory_hits;
+        return cache_memory[cache_address].value;
+    }
+    return value;
 }
 
 void write_memory(AWORD address, AWORD value)
@@ -167,6 +203,9 @@ int execute_stackmachine(void)
     uint8_t bytes[2];
     IWORD returnVal;
     IWORD value, value2;
+
+    // warm-up cache
+    cache_init();
     
     //DEBUG_print_memory(27);
     while(true) {
@@ -178,7 +217,7 @@ int execute_stackmachine(void)
         ++n_number_of_instructions;
 
         //printf("################################\n");
-        //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
+        printf("\n>> %s\n", INSTRUCTION_name[instruction]);
         //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
         //DEBUG_print_tos(11, SP);
 
