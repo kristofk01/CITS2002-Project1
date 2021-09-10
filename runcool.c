@@ -103,6 +103,16 @@ void report_statistics(void)
 //  THIS WILL MAKE THINGS EASIER WHEN WHEN EXTENDING THE CODE TO
 //  SUPPORT CACHE MEMORY
 
+
+struct cache_entry
+{
+    IWORD value;
+    AWORD address;
+    bool dirty; // 1 dirty, 0 o/w.
+};
+
+struct cache_entry cache_memory[N_CACHE_WORDS];
+
 AWORD read_memory(int address)
 {
     ++n_main_memory_reads;
