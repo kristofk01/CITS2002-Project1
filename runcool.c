@@ -180,6 +180,7 @@ int execute_stackmachine(void)
         {
 // No operation: PC advanced to the next instruction.
             case I_NOP:
+                ++PC;
                 break;
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
@@ -238,12 +239,14 @@ int execute_stackmachine(void)
                 address = FP + read_memory(PC);
                 returnVal = read_memory(SP);
 
-                // restore PC and FP to continue execution of the calling function
+                // restore PC, FP and SP to continue execution of the calling function
                 PC = read_memory(FP + 1);
                 FP = read_memory(FP);
+                SP = address;
 
                 // write return value to FP-offset
                 write_memory(address, returnVal);
+
 
                 //printf("addrs: %i, val: %i\n", address, returnVal);
                 //DEBUG_print_tos(5, SP);
