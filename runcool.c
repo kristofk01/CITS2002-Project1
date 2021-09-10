@@ -180,6 +180,7 @@ int execute_stackmachine(void)
         {
 // No operation: PC advanced to the next instruction.
             case I_NOP:
+                ++PC;
                 break;
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
@@ -203,9 +204,7 @@ int execute_stackmachine(void)
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 * value);
-                printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-                DEBUG_print_tos(25, SP);
-                printf("Arithmetic I_MULT: %i * %i\n", value2, value);
+                //printf("Arithmetic I_MULT: %i * %i\n", value2, value);
                 break;
 
 //Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
@@ -240,9 +239,10 @@ int execute_stackmachine(void)
                 address = FP + read_memory(PC);
                 returnVal = read_memory(SP);
 
-                // restore PC and FP to continue execution of the calling function
+                // restore PC, FP and SP to continue execution of the calling function
                 PC = read_memory(FP + 1);
                 FP = read_memory(FP);
+                SP = address;
 
                 // write return value to FP-offset
                 write_memory(address, returnVal);
@@ -267,7 +267,7 @@ int execute_stackmachine(void)
 
 // Print integer: Value at TOS popped and printed to stdout.
             case I_PRINTI:
-                value = read_memory(SP);
+                value = read_memory(SP++);
                 fprintf(stdout, "%i", value);
                 break;
 
