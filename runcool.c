@@ -107,22 +107,22 @@ void report_statistics(void)
 //  THIS WILL MAKE THINGS EASIER WHEN WHEN EXTENDING THE CODE TO
 //  SUPPORT CACHE MEMORY
 
-struct cache_entry
+struct cache_block
 {
-    IWORD value;
-    AWORD address;
     bool dirty; // 1 dirty, 0 o/w.
+    AWORD address;
+    IWORD value;
 };
 
-struct cache_entry cache_memory[N_CACHE_WORDS];
+struct cache_block cache_memory[N_CACHE_WORDS];
 
 void cache_init(void)
 {
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
-        struct cache_entry entry = {};
-        entry.dirty = 1;
-        cache_memory[i] = entry;
+        struct cache_block block = {};
+        block.dirty = 1;
+        cache_memory[i] = block;
         //TODO: count this as a write statistic?
     }
 }
@@ -130,19 +130,18 @@ void cache_init(void)
 AWORD read_memory(int address)
 {
     AWORD cache_address = address % N_CACHE_WORDS;
-    printf("cache address: %i\n", cache_address);
+    //printf("memory address: %i\ncache address: %i\n", address, cache_address);
     AWORD value;
 
-    if(cache_memory[cache_address].dirty)
+    if(!cache_memory[cache_address].dirty)
     {
         value = main_memory[address];
+        struct cache_block block = {};
+        block.dirty = 1;
+        block.address = address;
+        block.value = value;
 
-        struct cache_entry entry = {};
-        entry.address = address;
-        entry.value = value;
-        entry.dirty = 1;
-
-        cache_memory[cache_address] = entry;
+        cache_memory[cache_address] = block;
 
         ++n_main_memory_reads;
         ++n_cache_memory_misses;
@@ -186,6 +185,17 @@ void DEBUG_print_tos(int n, int SP)
     printf("\nTOS -> %i: %i\n\n", SP, main_memory[SP]);
 }
 
+void DEBUG_print_cache(void)
+{
+    for(int i = 0; i < N_CACHE_WORDS; ++i)
+    {
+        struct cache_block block = cache_memory[i];
+        printf("\nBlock %i:\n\taddress: %i\n\tvalue: %i\n\tdirty: %i\n",
+                i, block.address, block.value, block.dirty);
+        printf("################################\n");
+    }
+}
+
 //  -------------------------------------------------------------------
 
 //  EXECUTE THE INSTRUCTIONS IN main_memory[]
@@ -205,9 +215,9 @@ int execute_stackmachine(void)
     IWORD value, value2;
 
     // warm-up cache
-    cache_init();
+    //cache_init();
     
-    //DEBUG_print_memory(27);
+    DEBUG_print_memory(10);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -216,6 +226,7 @@ int execute_stackmachine(void)
 
         ++n_number_of_instructions;
 
+        //DEBUG_print_cache();
         //printf("################################\n");
         printf("\n>> %s\n", INSTRUCTION_name[instruction]);
         //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
