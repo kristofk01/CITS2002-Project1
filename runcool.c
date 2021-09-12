@@ -110,7 +110,7 @@ void report_statistics(void)
 struct cache_block
 {
     bool dirty; // 1 dirty, 0 o/w.
-    AWORD address;
+    int address;
     IWORD value;
 };
 
@@ -121,6 +121,7 @@ void cache_init(void)
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
         struct cache_block block = {};
+        block.address = -1;
         block.dirty = 1;
         cache_memory[i] = block;
     }
@@ -142,7 +143,6 @@ AWORD read_memory(int address)
     if(cache_memory[cache_address].address == address)
     {
         ++n_cache_memory_hits;
-        printf("requested word is in the cache\n");
 
         block = cache_memory[cache_address];
         return block.value;
@@ -151,26 +151,24 @@ AWORD read_memory(int address)
     {
         ++n_cache_memory_misses;
         ++n_main_memory_reads;
-        printf("requested word is NOT in the cache\n");
 
         // fill the new block
+        block.dirty = 1;
         block.address = address;
         block.value = main_memory[address];
-        
+
         // if the location has dirty data in it, save it in main memory
-        if(cache_memory[cache_address].dirty)
+        if(cache_memory[cache_address].dirty &&
+            cache_memory[cache_address].address != -1) // this is to ignore cache blocks that have never been touched
         {
             printf("WRITING DIRTY: %i, %i\n", cache_memory[cache_address].address,
                     cache_memory[cache_address].value);
             write_memory(cache_memory[cache_address].address,
                             cache_memory[cache_address].value);
-            block.dirty = 0;
-        }
-        else // location does not have dirty data in it
-        {
-            block.dirty = 1; // again, now out of sync
+            block.dirty = 0; // no longer dirty
         }
         
+        // write to cache
         cache_memory[cache_address] = block;
     }
 
