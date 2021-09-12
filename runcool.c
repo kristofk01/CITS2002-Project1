@@ -138,8 +138,8 @@ AWORD read_memory(int address)
     printf("memory address: %i cache address: %i\n", address, cache_address);
     struct cache_block block = {};
 
-    // if the requested word is in the cache and is not out of sync with main memory
-    if(cache_memory[cache_address].address == address && !cache_memory[cache_address].dirty)
+    // if the requested word is in the cache
+    if(cache_memory[cache_address].address == address)
     {
         ++n_cache_memory_hits;
         printf("requested word is in the cache\n");
@@ -147,7 +147,7 @@ AWORD read_memory(int address)
         block = cache_memory[cache_address];
         return block.value;
     }
-    else // if the requested word is not in the cache
+    else // the requested word is not in the cache
     {
         ++n_cache_memory_misses;
         ++n_main_memory_reads;
@@ -164,55 +164,17 @@ AWORD read_memory(int address)
                     cache_memory[cache_address].value);
             write_memory(cache_memory[cache_address].address,
                             cache_memory[cache_address].value);
-
-            // then, create a new block to overwrite the old block
-            block.dirty = 1; // again memory is now out of sync
-            return block.value;
+            block.dirty = 0;
         }
         else // location does not have dirty data in it
         {
-            cache_memory[cache_address] = block;
+            block.dirty = 1; // again, now out of sync
         }
+        
+        cache_memory[cache_address] = block;
     }
 
     return block.value;
-
-    /*
-    // read from cache if the location is not out of sync
-    if(cache_memory[cache_address].address == address && !cache_memory[cache_address].dirty)
-    {
-        ++n_cache_memory_hits;
-        struct cache_block block = cache_memory[cache_address];
-        return block.value;
-    }
-    else // write to cache
-    {
-        value = main_memory[address];
-        struct cache_block block = {};
-        block.address = address;
-        block.value = value;
-
-        // if 
-        if(cache_memory[cache_address].dirty)
-        {
-            block.dirty = 0;
-            cache_memory[cache_address] = block;
-            write_memory(address, block.value);
-        }
-        else
-        {
-            block.dirty = 1;
-            cache_memory[cache_address] = block;
-        }
-
-        ++n_main_memory_reads;
-        ++n_cache_memory_misses;
-    }
-    
-    printf("val: %i\n", value);
-    
-    return value;
-    */
 }
 
 //  -------------------------------------------------------------------
