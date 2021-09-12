@@ -138,28 +138,41 @@ AWORD read_memory(int address)
     printf("memory address: %i cache address: %i\n", address, cache_address);
     struct cache_block block = {};
 
-    // if the requested word is in the cache
-    if(cache_memory[cache_address].address == address)
+    // if the requested word is in the cache and is not out of sync with main memory
+    if(cache_memory[cache_address].address == address && !cache_memory[cache_address].dirty)
     {
         ++n_cache_memory_hits;
+        printf("requested word is in the cache\n");
+
         block = cache_memory[cache_address];
         return block.value;
     }
     else // if the requested word is not in the cache
     {
+        ++n_cache_memory_misses;
+        ++n_main_memory_reads;
+        printf("requested word is NOT in the cache\n");
+
+        // fill the new block
+        block.address = address;
+        block.value = main_memory[address];
+        
         // if the location has dirty data in it, save it in main memory
         if(cache_memory[cache_address].dirty)
         {
+            printf("WRITING DIRTY: %i, %i\n", cache_memory[cache_address].address,
+                    cache_memory[cache_address].value);
             write_memory(cache_memory[cache_address].address,
                             cache_memory[cache_address].value);
-        }
 
-        // then create a new block to overwrite the old block
-        block.address = address;
-        block.value = main_memory[address];
-        block.dirty = 1; // again memory is now out of sync
-        cache_memory[cache_address] = block;
-        return block.value;
+            // then, create a new block to overwrite the old block
+            block.dirty = 1; // again memory is now out of sync
+            return block.value;
+        }
+        else // location does not have dirty data in it
+        {
+            cache_memory[cache_address] = block;
+        }
     }
 
     return block.value;
