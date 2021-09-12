@@ -94,8 +94,7 @@ void report_statistics(void)
     printf("\n@number-of-instructions\t\t%i\n", n_number_of_instructions);
     printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
 
-    n_percentage_of_cache_hits = n_cache_memory_hits / n_cache_memory_misses * 100;
-    printf("%i %i\n", n_cache_memory_hits, n_cache_memory_misses);
+    n_percentage_of_cache_hits = (float)n_cache_memory_hits / (float)n_cache_memory_misses * 100.0f;
     printf("@percentage-of-cache-hits\t%.1f%%\n", n_percentage_of_cache_hits);
     /////////
 }
@@ -133,6 +132,7 @@ AWORD read_memory(int address)
     //printf("memory address: %i\ncache address: %i\n", address, cache_address);
     AWORD value;
 
+    // write to cache
     if(!cache_memory[cache_address].dirty)
     {
         value = main_memory[address];
@@ -146,7 +146,7 @@ AWORD read_memory(int address)
         ++n_main_memory_reads;
         ++n_cache_memory_misses;
     }
-    else
+    else // read from cache
     {
         ++n_cache_memory_hits;
         struct cache_block block = {};
