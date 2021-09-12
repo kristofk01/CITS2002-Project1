@@ -126,41 +126,50 @@ void cache_init(void)
     }
 }
 
-AWORD read_memory(int address)
-{
-    AWORD cache_address = address % N_CACHE_WORDS;
-    //printf("memory address: %i\ncache address: %i\n", address, cache_address);
-    AWORD value;
-
-    // write to cache
-    if(!cache_memory[cache_address].dirty)
-    {
-        value = main_memory[address];
-        struct cache_block block = {};
-        block.dirty = 1;
-        block.address = address;
-        block.value = value;
-
-        cache_memory[cache_address] = block;
-
-        ++n_main_memory_reads;
-        ++n_cache_memory_misses;
-    }
-    else // read from cache
-    {
-        ++n_cache_memory_hits;
-        struct cache_block block = {};
-        block = cache_memory[cache_address];
-        block.dirty = 0;
-        return block.value;
-    }
-    return value;
-}
-
 void write_memory(AWORD address, AWORD value)
 {
     ++n_main_memory_writes;
     main_memory[address] = value;
+}
+
+AWORD read_memory(int address)
+{
+    int cache_address = address % N_CACHE_WORDS;
+    printf("memory address: %i cache address: %i\n", address, cache_address);
+    AWORD value;
+
+    // read from cache if the location is not out of sync
+    if(cache_memory[cache_address].address == address && !cache_memory[cache_address].dirty)
+    {
+        ++n_cache_memory_hits;
+        struct cache_block block = cache_memory[cache_address];
+        printf("val: %i\n", block.value);
+        return block.value;
+    }
+    else // write to cache
+    {
+        value = main_memory[address];
+        struct cache_block block = {};
+        block.address = address;
+        block.value = value;
+
+        // if we are not overwriting an existing cache block
+        if(cache_memory[cache_address].dirty)
+        {
+            block.dirty = 0; // cache and memory are now out of sync
+            cache_memory[cache_address] = block;
+            write_memory(address, block.value); // so we write it to memory
+        }
+        else
+        {
+            block.dirty = 1; // not needed but more readable
+            cache_memory[cache_address] = block;
+        }
+
+        ++n_main_memory_reads;
+        ++n_cache_memory_misses;
+    }
+    return value;
 }
 
 //  -------------------------------------------------------------------
@@ -218,9 +227,9 @@ int execute_stackmachine(void)
     IWORD value, value2;
 
     // warm-up cache
-    //cache_init();
-    
-    //DEBUG_print_memory(10);
+    cache_init();
+
+    DEBUG_print_memory(10);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
