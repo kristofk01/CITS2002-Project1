@@ -95,6 +95,7 @@ void report_statistics(void)
     printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
 
     n_percentage_of_cache_hits = n_cache_memory_hits / n_cache_memory_misses * 100;
+    printf("%i %i\n", n_cache_memory_hits, n_cache_memory_misses);
     printf("@percentage-of-cache-hits\t%.1f%%\n", n_percentage_of_cache_hits);
     /////////
 }
@@ -123,7 +124,6 @@ void cache_init(void)
         struct cache_block block = {};
         block.dirty = 1;
         cache_memory[i] = block;
-        //TODO: count this as a write statistic?
     }
 }
 
@@ -149,7 +149,10 @@ AWORD read_memory(int address)
     else
     {
         ++n_cache_memory_hits;
-        return cache_memory[cache_address].value;
+        struct cache_block block = {};
+        block = cache_memory[cache_address];
+        block.dirty = 0;
+        return block.value;
     }
     return value;
 }
@@ -187,13 +190,13 @@ void DEBUG_print_tos(int n, int SP)
 
 void DEBUG_print_cache(void)
 {
-    for(int i = 0; i < N_CACHE_WORDS; ++i)
+    printf("Cache memory: \n");
+    for(int i = 0; i < 5; i++)
     {
-        struct cache_block block = cache_memory[i];
-        printf("\nBlock %i:\n\taddress: %i\n\tvalue: %i\n\tdirty: %i\n",
-                i, block.address, block.value, block.dirty);
-        printf("################################\n");
+        printf("%u: %i, %u, %i |", i, cache_memory[i].dirty,
+                cache_memory[i].address, cache_memory[i].value);
     }
+    printf("\n");
 }
 
 //  -------------------------------------------------------------------
@@ -217,7 +220,7 @@ int execute_stackmachine(void)
     // warm-up cache
     //cache_init();
     
-    DEBUG_print_memory(10);
+    //DEBUG_print_memory(10);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -226,9 +229,9 @@ int execute_stackmachine(void)
 
         ++n_number_of_instructions;
 
-        //DEBUG_print_cache();
+        DEBUG_print_cache();
         //printf("################################\n");
-        printf("\n>> %s\n", INSTRUCTION_name[instruction]);
+        //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
         //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
         //DEBUG_print_tos(11, SP);
 
