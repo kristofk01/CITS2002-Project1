@@ -121,7 +121,6 @@ void cache_init(void)
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
         struct cache_block block = {};
-        block.address = -1;
         block.dirty = 1;
         cache_memory[i] = block;
     }
@@ -136,40 +135,42 @@ void write_memory(AWORD address, AWORD value)
 AWORD read_memory(int address)
 {
     int cache_address = address % N_CACHE_WORDS;
+
     printf("memory address: %i cache address: %i\n", address, cache_address);
     struct cache_block block = {};
 
     // if the requested word is in the cache
-    if(cache_memory[cache_address].address == address)
+    if(cache_memory[cache_address].address == address && !(cache_memory[cache_address].dirty &&
+        cache_memory[cache_address].address == 0 && cache_memory[cache_address].value == 0))
     {
         ++n_cache_memory_hits;
-
         block = cache_memory[cache_address];
-        return block.value;
     }
     else // the requested word is not in the cache
     {
         ++n_cache_memory_misses;
         ++n_main_memory_reads;
+        printf("WRITING TO CACHE -> ");
 
         // fill the new block
-        block.dirty = 1;
         block.address = address;
         block.value = main_memory[address];
 
-        // if the location has dirty data in it, save it in main memory
-        if(cache_memory[cache_address].dirty &&
-            cache_memory[cache_address].address != -1) // this is to ignore cache blocks that have never been touched
+        // if the location has dirty data in it, evict the block
+        if(cache_memory[cache_address].dirty && !(cache_memory[cache_address].dirty &&
+            cache_memory[cache_address].address == 0 && cache_memory[cache_address].value == 0))
         {
-            printf("WRITING DIRTY: %i, %i\n", cache_memory[cache_address].address,
-                    cache_memory[cache_address].value);
+            printf("WRITING DIRTY -> ");
             write_memory(cache_memory[cache_address].address,
                             cache_memory[cache_address].value);
             block.dirty = 0; // no longer dirty
         }
-        
-        // write to cache
+        else
+        {
+            block.dirty = 1;
+        }
         cache_memory[cache_address] = block;
+        printf("%i, %i, %i\n", block.dirty, block.address, block.value);
     }
 
     return block.value;
@@ -203,7 +204,7 @@ void DEBUG_print_tos(int n, int SP)
 void DEBUG_print_cache(void)
 {
     printf("Cache memory: \n");
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i < 7; i++)
     {
         printf("%u: %i, %u, %i |", i, cache_memory[i].dirty,
                 cache_memory[i].address, cache_memory[i].value);
@@ -229,7 +230,6 @@ int execute_stackmachine(void)
     IWORD returnVal;
     IWORD value, value2;
 
-    // warm-up cache
     cache_init();
 
     DEBUG_print_memory(10);
@@ -243,8 +243,8 @@ int execute_stackmachine(void)
 
         DEBUG_print_cache();
         //printf("################################\n");
-        //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
-        //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
+        printf("\n>> %s\n", INSTRUCTION_name[instruction]);
+        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
         //DEBUG_print_tos(11, SP);
 
         if(instruction == I_HALT) {
