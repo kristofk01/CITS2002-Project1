@@ -122,7 +122,7 @@ void cache_init(void)
     //cache_memory[0].address = N_MAIN_MEMORY_WORDS;
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
-        cache_memory[i].address = N_MAIN_MEMORY_WORDS - i;
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS;
         cache_memory[i].dirty = 1;
     }
 }
@@ -132,12 +132,12 @@ void write_memory(AWORD address, AWORD value)
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
-    printf("#memory address: %i cache address: %i\n", address, cache_address);
+    //printf("#memory address: %i cache address: %i\n", address, cache_address);
 
     // if cache hit
     if(block.address == address)
     {
-        //++n_cache_memory_hits;
+        ++n_cache_memory_hits;
         cache_memory[cache_address].value = value;
     }
     else // cache miss
@@ -146,16 +146,15 @@ void write_memory(AWORD address, AWORD value)
     
         if(block.dirty)
         {
-            printf("WRITING DIRTY -> %i %i\n", block.address, block.value);
+            //printf("WRITING DIRTY -> %i %i\n", block.address, block.value);
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
-        }
-        
-        block.value = value;
-        block.address = address;
-        cache_memory[cache_address] = block;
+        }  
     }
-    cache_memory[cache_address].dirty = 1;
+    block.dirty = 1;
+    block.address = address;
+    block.value = value;
+    cache_memory[cache_address] = block;
 }
 
 AWORD read_memory(int address)
@@ -163,7 +162,7 @@ AWORD read_memory(int address)
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
-    printf("memory address: %i cache address: %i\n", address, cache_address);
+    //printf("memory address: %i cache address: %i\n", address, cache_address);
 
     // if cache hit
     if(block.address == address)
@@ -173,7 +172,7 @@ AWORD read_memory(int address)
     }
     else // cache miss
     {
-        //++n_cache_memory_misses;
+        ++n_cache_memory_misses;
 
         if(block.dirty)
         {
@@ -245,7 +244,7 @@ int execute_stackmachine(void)
 
     cache_init();
 
-    DEBUG_print_memory(10);
+    //DEBUG_print_memory(10);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -254,10 +253,10 @@ int execute_stackmachine(void)
 
         ++n_number_of_instructions;
 
-        DEBUG_print_cache();
+        //DEBUG_print_cache();
         //printf("################################\n");
-        printf("\n>> %s\n", INSTRUCTION_name[instruction]);
-        printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
+        //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
+        //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
         //DEBUG_print_tos(11, SP);
 
         if(instruction == I_HALT) {
