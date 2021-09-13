@@ -119,10 +119,9 @@ struct cache_block cache_memory[N_CACHE_WORDS];
 
 void cache_init(void)
 {
-    //cache_memory[0].address = N_MAIN_MEMORY_WORDS;
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
-        cache_memory[i].address = N_MAIN_MEMORY_WORDS - i;
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS;
         cache_memory[i].dirty = 1;
     }
 }
