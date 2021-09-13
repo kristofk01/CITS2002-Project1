@@ -129,7 +129,7 @@ void cache_init(void)
 void write_memory(AWORD address, AWORD value)
 {
     int cache_address = address % N_CACHE_WORDS;
-    struct cache_block block = cache_memory[cache_address];
+    struct cache_block block = {};
 
     //printf("#memory address: %i cache address: %i\n", address, cache_address);
 
@@ -142,7 +142,8 @@ void write_memory(AWORD address, AWORD value)
     else // cache miss
     {
         ++n_cache_memory_misses;
-    
+
+        block = cache_memory[cache_address];
         if(block.dirty)
         {
             //printf("WRITING DIRTY -> %i %i\n", block.address, block.value);
