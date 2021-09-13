@@ -80,6 +80,7 @@ int n_cache_memory_misses   = 0;
 // TODO REMOVE
 int n_number_of_instructions   = 0;
 int n_number_of_function_calls = 0;
+float n_percentage_of_cache_hits = 0;
 ///////////
 
 void report_statistics(void)
@@ -92,6 +93,10 @@ void report_statistics(void)
     // TODO REMOVE
     printf("\n@number-of-instructions\t\t%i\n", n_number_of_instructions);
     printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
+
+    n_percentage_of_cache_hits = (float)n_cache_memory_hits / 
+        ((float)n_cache_memory_misses + n_cache_memory_hits) * 100.0f;
+    printf("@percentage-of-cache-hits\t%.1f%%\n", n_percentage_of_cache_hits);
     /////////
 }
 
@@ -103,16 +108,83 @@ void report_statistics(void)
 //  THIS WILL MAKE THINGS EASIER WHEN WHEN EXTENDING THE CODE TO
 //  SUPPORT CACHE MEMORY
 
-AWORD read_memory(int address)
+struct cache_block
 {
-    ++n_main_memory_reads;
-    return main_memory[address];
+    bool dirty; // 1 dirty, 0 o/w.
+    int address;
+    IWORD value;
+};
+
+struct cache_block cache_memory[N_CACHE_WORDS];
+
+void cache_init(void)
+{
+    for(int i = 0; i < N_CACHE_WORDS; ++i)
+    {
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS;
+        cache_memory[i].dirty = 1;
+    }
 }
 
 void write_memory(AWORD address, AWORD value)
 {
-    ++n_main_memory_writes;
-    main_memory[address] = value;
+    int cache_address = address % N_CACHE_WORDS;
+    struct cache_block block = cache_memory[cache_address];
+
+    //printf("#memory address: %i cache address: %i\n", address, cache_address);
+
+    // if cache hit
+    if(block.address == address)
+    {
+        ++n_cache_memory_hits;
+        cache_memory[cache_address].value = value;
+    }
+    else // cache miss
+    {
+        ++n_cache_memory_misses;
+    
+        if(block.dirty)
+        {
+            //printf("WRITING DIRTY -> %i %i\n", block.address, block.value);
+            ++n_main_memory_writes;
+            main_memory[block.address] = block.value;
+        }  
+    }
+    block.dirty = 1;
+    block.address = address;
+    block.value = value;
+    cache_memory[cache_address] = block;
+}
+
+AWORD read_memory(int address)
+{
+    int cache_address = address % N_CACHE_WORDS;
+    struct cache_block block = cache_memory[cache_address];
+
+    //printf("memory address: %i cache address: %i\n", address, cache_address);
+
+    // if cache hit
+    if(block.address == address)
+    {
+        ++n_cache_memory_hits;
+        return block.value;
+    }
+    else // cache miss
+    {
+        ++n_cache_memory_misses;
+
+        if(block.dirty)
+        {
+            write_memory(block.address, block.value);
+        }
+
+        ++n_main_memory_reads;
+        block.dirty = 0;
+        block.address = address;
+        block.value = main_memory[address];
+        cache_memory[cache_address] = block;
+    }
+    return block.value;
 }
 
 //  -------------------------------------------------------------------
@@ -140,6 +212,17 @@ void DEBUG_print_tos(int n, int SP)
     printf("\nTOS -> %i: %i\n\n", SP, main_memory[SP]);
 }
 
+void DEBUG_print_cache(void)
+{
+    printf("Cache memory: \n");
+    for(int i = 0; i < 7; i++)
+    {
+        printf("%u: %i, %u, %i |", i, cache_memory[i].dirty,
+                cache_memory[i].address, cache_memory[i].value);
+    }
+    printf("\n");
+}
+
 //  -------------------------------------------------------------------
 
 //  EXECUTE THE INSTRUCTIONS IN main_memory[]
@@ -157,8 +240,10 @@ int execute_stackmachine(void)
     uint8_t bytes[2];
     IWORD returnVal;
     IWORD value, value2;
-    
-    //DEBUG_print_memory(27);
+
+    cache_init();
+
+    //DEBUG_print_memory(10);
     while(true) {
 
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
@@ -167,6 +252,7 @@ int execute_stackmachine(void)
 
         ++n_number_of_instructions;
 
+        //DEBUG_print_cache();
         //printf("################################\n");
         //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
         //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
