@@ -94,7 +94,8 @@ void report_statistics(void)
     printf("\n@number-of-instructions\t\t%i\n", n_number_of_instructions);
     printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
 
-    n_percentage_of_cache_hits = (float)n_cache_memory_hits / (float)n_cache_memory_misses * 100.0f;
+    n_percentage_of_cache_hits = (float)n_cache_memory_hits / 
+        ((float)n_cache_memory_misses + n_cache_memory_hits) * 100.0f;
     printf("@percentage-of-cache-hits\t%.1f%%\n", n_percentage_of_cache_hits);
     /////////
 }
@@ -118,61 +119,73 @@ struct cache_block cache_memory[N_CACHE_WORDS];
 
 void cache_init(void)
 {
+    //cache_memory[0].address = N_MAIN_MEMORY_WORDS;
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
-        struct cache_block block = {};
-        block.dirty = 1;
-        cache_memory[i] = block;
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS - i;
+        cache_memory[i].dirty = 1;
     }
 }
 
 void write_memory(AWORD address, AWORD value)
 {
-    ++n_main_memory_writes;
-    main_memory[address] = value;
+    int cache_address = address % N_CACHE_WORDS;
+    struct cache_block block = cache_memory[cache_address];
+
+    printf("#memory address: %i cache address: %i\n", address, cache_address);
+
+    // if cache hit
+    if(block.address == address)
+    {
+        //++n_cache_memory_hits;
+        cache_memory[cache_address].value = value;
+    }
+    else // cache miss
+    {
+        ++n_cache_memory_misses;
+    
+        if(block.dirty)
+        {
+            printf("WRITING DIRTY -> %i %i\n", block.address, block.value);
+            ++n_main_memory_writes;
+            main_memory[block.address] = block.value;
+        }
+        
+        block.value = value;
+        block.address = address;
+        cache_memory[cache_address] = block;
+    }
+    cache_memory[cache_address].dirty = 1;
 }
 
 AWORD read_memory(int address)
 {
     int cache_address = address % N_CACHE_WORDS;
+    struct cache_block block = cache_memory[cache_address];
 
     printf("memory address: %i cache address: %i\n", address, cache_address);
-    struct cache_block block = {};
 
-    // if the requested word is in the cache
-    if(cache_memory[cache_address].address == address && !(cache_memory[cache_address].dirty &&
-        cache_memory[cache_address].address == 0 && cache_memory[cache_address].value == 0))
+    // if cache hit
+    if(block.address == address)
     {
         ++n_cache_memory_hits;
-        block = cache_memory[cache_address];
+        return block.value;
     }
-    else // the requested word is not in the cache
+    else // cache miss
     {
-        ++n_cache_memory_misses;
-        ++n_main_memory_reads;
-        printf("WRITING TO CACHE -> ");
+        //++n_cache_memory_misses;
 
-        // fill the new block
+        if(block.dirty)
+        {
+            write_memory(block.address, block.value);
+        }
+
+        ++n_main_memory_reads;
+        block.dirty = 0;
         block.address = address;
         block.value = main_memory[address];
-
-        // if the location has dirty data in it, evict the block
-        if(cache_memory[cache_address].dirty && !(cache_memory[cache_address].dirty &&
-            cache_memory[cache_address].address == 0 && cache_memory[cache_address].value == 0))
-        {
-            printf("WRITING DIRTY -> ");
-            write_memory(cache_memory[cache_address].address,
-                            cache_memory[cache_address].value);
-            block.dirty = 0; // no longer dirty
-        }
-        else
-        {
-            block.dirty = 1;
-        }
         cache_memory[cache_address] = block;
-        printf("%i, %i, %i\n", block.dirty, block.address, block.value);
     }
-
     return block.value;
 }
 
