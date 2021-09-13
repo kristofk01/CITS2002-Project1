@@ -143,13 +143,15 @@ void write_memory(AWORD address, AWORD value)
     {
         ++n_cache_memory_misses;
 
+        // locate cache block to use
         block = cache_memory[cache_address];
+
         if(block.dirty)
         {
             //printf("WRITING DIRTY -> %i %i\n", block.address, block.value);
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
-        }  
+        }
     }
     block.dirty = 1;
     block.address = address;
@@ -173,13 +175,13 @@ AWORD read_memory(int address)
     else // cache miss
     {
         ++n_cache_memory_misses;
+        ++n_main_memory_reads;
 
         if(block.dirty)
         {
             write_memory(block.address, block.value);
         }
-
-        ++n_main_memory_reads;
+        
         block.dirty = 0;
         block.address = address;
         block.value = main_memory[address];
