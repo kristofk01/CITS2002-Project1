@@ -1,6 +1,6 @@
 //  CITS2002 Project 1 2021
-//  Name(s):             Daniel Ling   , Kristof Kovacs
-//  Student number(s):   22896002 , 22869854
+//  Name(s):             Daniel Ling,   Kristof Kovacs
+//  Student number(s):   22896002,      22869854
 
 //  compile with:  cc -std=c11 -Wall -Werror -o runcool runcool.c
 
@@ -112,7 +112,7 @@ struct cache_block
 {
     bool dirty; // 1 dirty, 0 o/w.
     int address;
-    IWORD value;
+    AWORD value;
 };
 
 struct cache_block cache_memory[N_CACHE_WORDS];
@@ -121,68 +121,63 @@ void cache_init(void)
 {
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
-        cache_memory[i].address = N_MAIN_MEMORY_WORDS;
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS/2 - i - 1;
         cache_memory[i].dirty = 1;
     }
 }
 
 void write_memory(AWORD address, AWORD value)
 {
+    // locate cache block to use
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
-    //printf("#memory address: %i cache address: %i\n", address, cache_address);
-
-    // if cache hit
-    if(block.address == address)
+    // if cache miss
+    if(block.address != address)
     {
-        ++n_cache_memory_hits;
-        cache_memory[cache_address].value = value;
-    }
-    else // cache miss
-    {
-        ++n_cache_memory_misses;
-    
         if(block.dirty)
         {
-            //printf("WRITING DIRTY -> %i %i\n", block.address, block.value);
-            ++n_main_memory_writes;
+            //printf("WRITING DIRTY (write):\t%i\t\t %i\n", block.address, block.value);
             main_memory[block.address] = block.value;
-        }  
+        }
     }
     block.dirty = 1;
     block.address = address;
     block.value = value;
     cache_memory[cache_address] = block;
+    //printf("WROTE NEW BLOCK %i (write):\td: %i,\ta: %i,\tv: %i\n", cache_address, block.dirty, block.address, block.value);
 }
 
 AWORD read_memory(int address)
 {
+    // locate cache block to use
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
-
-    //printf("memory address: %i cache address: %i\n", address, cache_address);
 
     // if cache hit
     if(block.address == address)
     {
+        //printf("hit on read: %i, %i\n", address, cache_address);
         ++n_cache_memory_hits;
         return block.value;
     }
     else // cache miss
     {
         ++n_cache_memory_misses;
+        ++n_main_memory_reads;
 
         if(block.dirty)
         {
-            write_memory(block.address, block.value);
+            //printf("WRITING DIRTY (read):\t%i\t\t %i\n", block.address, block.value);
+            ++n_main_memory_writes;
+            main_memory[block.address] = block.value;
         }
 
-        ++n_main_memory_reads;
         block.dirty = 0;
         block.address = address;
         block.value = main_memory[address];
         cache_memory[cache_address] = block;
+        //printf("WROTE NEW BLOCK %i (read):\td: %i,\ta: %i,\tv: %i\n", cache_address, block.dirty, block.address, block.value);
     }
     return block.value;
 }
@@ -257,6 +252,7 @@ int execute_stackmachine(void)
         //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
         //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
         //DEBUG_print_tos(11, SP);
+        //DEBUG_print_memory(7);
 
         if(instruction == I_HALT) {
             break;
@@ -266,7 +262,7 @@ int execute_stackmachine(void)
         {
 // No operation: PC advanced to the next instruction.
             case I_NOP:
-                ++PC;
+                //++PC;
                 break;
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
