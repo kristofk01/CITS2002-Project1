@@ -1,6 +1,6 @@
 //  CITS2002 Project 1 2021
-//  Name(s):             Daniel Ling   , Kristof Kovacs
-//  Student number(s):   22896002 , 22869854
+//  Name(s):             Daniel Ling,   Kristof Kovacs
+//  Student number(s):   22896002,      22869854
 
 //  compile with:  cc -std=c11 -Wall -Werror -o runcool runcool.c
 
@@ -128,28 +128,16 @@ void cache_init(void)
 
 void write_memory(AWORD address, AWORD value)
 {
-    //printf("write memory: %i -> %i\n", address, value);
-
-    int cache_address = address % N_CACHE_WORDS;
-
     // locate cache block to use
+    int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
-    // if cache hit
-    if(block.address == address)
+    // if cache miss
+    if(block.address != address)
     {
-        //printf("hit on write: %i, %i\n", address, cache_address);
-        //if(block.value == value) return; // nice optimisation
-        ;
-    }
-    else // cache miss
-    {
-        ++n_cache_memory_misses;
-
         if(block.dirty)
         {
             //printf("WRITING DIRTY (write):\t%i\t\t %i\n", block.address, block.value);
-            ++n_main_memory_writes;
             main_memory[block.address] = block.value;
         }
     }
@@ -162,11 +150,8 @@ void write_memory(AWORD address, AWORD value)
 
 AWORD read_memory(int address)
 {
-    //printf("read_memory: %i\n", address);
-
-    int cache_address = address % N_CACHE_WORDS;
-
     // locate cache block to use
+    int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
     // if cache hit
@@ -184,8 +169,6 @@ AWORD read_memory(int address)
         if(block.dirty)
         {
             //printf("WRITING DIRTY (read):\t%i\t\t %i\n", block.address, block.value);
-            //write_memory(block.address, block.value);
-            
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
         }
