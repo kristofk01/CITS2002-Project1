@@ -119,10 +119,9 @@ struct cache_block cache_memory[N_CACHE_WORDS];
 
 void cache_init(void)
 {
-    cache_memory[0].address = N_MAIN_MEMORY_WORDS;
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
-        //cache_memory[i].address = N_MAIN_MEMORY_WORDS;
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS - i - 1;
         cache_memory[i].dirty = 1;
     }
 }
@@ -140,8 +139,8 @@ void write_memory(AWORD address, AWORD value)
     if(block.address == address)
     {
         //printf("hit on write: %i, %i\n", address, cache_address);
+        //if(block.value == value) return; // nice optimisation
         ++n_cache_memory_hits;
-        //cache_memory[cache_address].value = value; // this line is unecessary
     }
     else // cache miss
     {
@@ -149,8 +148,8 @@ void write_memory(AWORD address, AWORD value)
 
         if(block.dirty)
         {
-            ++n_main_memory_writes;
             //printf("WRITING DIRTY (write):\t%i\t\t %i\n", block.address, block.value);
+            ++n_main_memory_writes;
             main_memory[block.address] = block.value;
         }
     }
@@ -186,6 +185,7 @@ AWORD read_memory(int address)
         {
             //printf("WRITING DIRTY (read):\t%i\t\t %i\n", block.address, block.value);
             //write_memory(block.address, block.value);
+            
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
         }
@@ -266,7 +266,7 @@ int execute_stackmachine(void)
 
         //DEBUG_print_cache();
         //printf("################################\n");
-        printf("\n>> %s\n", INSTRUCTION_name[instruction]);
+        //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
         //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
         //DEBUG_print_tos(11, SP);
         //DEBUG_print_memory(7);
