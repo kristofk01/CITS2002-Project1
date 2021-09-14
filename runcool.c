@@ -121,7 +121,7 @@ void cache_init(void)
 {
     for(int i = 0; i < N_CACHE_WORDS; ++i)
     {
-        cache_memory[i].address = N_MAIN_MEMORY_WORDS - i - 1;
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS/2 - i - 1;
         cache_memory[i].dirty = 1;
     }
 }
@@ -140,7 +140,7 @@ void write_memory(AWORD address, AWORD value)
     {
         //printf("hit on write: %i, %i\n", address, cache_address);
         //if(block.value == value) return; // nice optimisation
-        ++n_cache_memory_hits;
+        ;
     }
     else // cache miss
     {
@@ -279,7 +279,7 @@ int execute_stackmachine(void)
         {
 // No operation: PC advanced to the next instruction.
             case I_NOP:
-                ++PC;
+                //++PC;
                 break;
 
 // Add: Two integers on TOS popped and added. Result is left on the TOS.
