@@ -1,8 +1,6 @@
 //  CITS2002 Project 1 2021
-//  Name(s):             Daniel Ling,   Kristof Kovacs
-//  Student number(s):   22896002,      22869854
-
-//  compile with:  cc -std=c11 -Wall -Werror -o runcool runcool.c
+//  Name(s):             Daniel Ling , Kristof Kovacs
+//  Student number(s):   22896002    , 22869854
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -25,8 +23,6 @@ AWORD                       main_memory[N_MAIN_MEMORY_WORDS];
 //  THE SMALL-BUT-FAST CACHE HAS 32 WORDS OF MEMORY
 #define N_CACHE_WORDS       32
 
-
-//  see:  https://teaching.csse.uwa.edu.au/units/CITS2002/projects/coolinstructions.php
 enum INSTRUCTION {
     I_HALT       = 0,
     I_NOP,
@@ -68,79 +64,78 @@ const char *INSTRUCTION_name[] = {
     "popr"
 };
 
-//  ----  IT IS SAFE TO MODIFY ANYTHING BELOW THIS LINE  --------------
-
-
 //  THE STATISTICS TO BE ACCUMULATED AND REPORTED
 int n_main_memory_reads     = 0;
 int n_main_memory_writes    = 0;
 int n_cache_memory_hits     = 0;
 int n_cache_memory_misses   = 0;
 
-// TODO REMOVE
 int n_number_of_instructions   = 0;
 int n_number_of_function_calls = 0;
 float n_percentage_of_cache_hits = 0;
-///////////
+int exit_status = 0;
 
-void report_statistics(void)
-{
-    printf("@number-of-main-memory-reads\t%i\n",    n_main_memory_reads);
-    printf("@number-of-main-memory-writes\t%i\n",   n_main_memory_writes);
-    printf("@number-of-cache-memory-hits\t%i\n",    n_cache_memory_hits);
-    printf("@number-of-cache-memory-misses\t%i\n",  n_cache_memory_misses);
+void report_statistics(void) {
+    printf("@number-of-main-memory-reads-(fast-jeq)  %i\n", n_main_memory_reads);
+    printf("@number-of-main-memory-writes-(fast-jeq) %i\n", n_main_memory_writes);
+    printf("@number-of-cache-memory-hits\t\t %i\n", n_cache_memory_hits);
+    printf("@number-of-cache-memory-misses\t\t %i\n", n_cache_memory_misses);
 
-    // TODO REMOVE
     printf("\n@number-of-instructions\t\t%i\n", n_number_of_instructions);
     printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
 
     n_percentage_of_cache_hits = (float)n_cache_memory_hits / 
         ((float)n_cache_memory_misses + n_cache_memory_hits) * 100.0f;
     printf("@percentage-of-cache-hits\t%.1f%%\n", n_percentage_of_cache_hits);
-    /////////
+
+    printf("\n@exit(%i)\n", exit_status);
 }
 
 //  -------------------------------------------------------------------
 
-//  EVEN THOUGH main_memory[] IS AN ARRAY OF WORDS, IT SHOULD NOT BE ACCESSED DIRECTLY.
-//  INSTEAD, USE THESE FUNCTIONS read_memory() and write_memory()
-//
-//  THIS WILL MAKE THINGS EASIER WHEN WHEN EXTENDING THE CODE TO
-//  SUPPORT CACHE MEMORY
-
-struct cache_block
-{
+//  The cache is represented as an array of cache blocks, where each block consists of:
+//      - dirty bit -> determines if the block is out-of-sync with main memory
+//      - address   -> points to the corresponding main_memory address
+//      - value     -> the word stored in the cache
+struct cache_block {
     bool dirty; // 1 dirty, 0 o/w.
     int address;
     AWORD value;
-};
+} cache_memory[N_CACHE_WORDS];
 
-struct cache_block cache_memory[N_CACHE_WORDS];
-
-void cache_init(void)
-{
-    for(int i = 0; i < N_CACHE_WORDS; ++i)
-    {
-        cache_memory[i].address = N_MAIN_MEMORY_WORDS/2 - i - 1;
+// Initialise all cache blocks in the cache to be dirty with an temporary
+// address pointing to the middle of memory.
+void cache_init(void) {
+    for(int i = 0; i < N_CACHE_WORDS; ++i) {
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS/2;
         cache_memory[i].dirty = 1;
     }
 }
 
-void write_memory(AWORD address, AWORD value)
+//  -------------------------------------------------------------------
+
+//  Function to implement the writing aspect of the write-back cache policy.
+//  Variable arguments: int address (The address where the value will be written into.)
+//                      AWORD value (The value that will be stored.)
+
+void write_memory(int address, AWORD value)
 {
-    // locate cache block to use
+    //printf("write memory: %i -> %i\n", address, value);
+
+//  Locates the cache block to use.
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
-    // if cache miss
-    if(block.address != address)
-    {
-        if(block.dirty)
-        {
+//  cache miss
+    if(block.address != address) {
+        // if the block is dirty but is also not the block we initialised at the start of execution
+        if(block.dirty && block.address != N_MAIN_MEMORY_WORDS/2) {
             //printf("WRITING DIRTY (write):\t%i\t\t %i\n", block.address, block.value);
+            ++n_main_memory_writes;
             main_memory[block.address] = block.value;
         }
     }
+
     block.dirty = 1;
     block.address = address;
     block.value = value;
@@ -148,26 +143,28 @@ void write_memory(AWORD address, AWORD value)
     //printf("WROTE NEW BLOCK %i (write):\td: %i,\ta: %i,\tv: %i\n", cache_address, block.dirty, block.address, block.value);
 }
 
+//  Function to implement the reading aspect of the write-back cache policy.
+//  Variable arguments: int address (The address where the value will be read from.)
 AWORD read_memory(int address)
 {
-    // locate cache block to use
+    //printf("read_memory: %i\n", address);
+
+//  locate cache block to use
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
-    // if cache hit
-    if(block.address == address)
-    {
+//  cache hit
+    if(block.address == address) {
         //printf("hit on read: %i, %i\n", address, cache_address);
         ++n_cache_memory_hits;
         return block.value;
     }
-    else // cache miss
-    {
+//  cache miss
+    else {
         ++n_cache_memory_misses;
         ++n_main_memory_reads;
 
-        if(block.dirty)
-        {
+        if(block.dirty) {
             //printf("WRITING DIRTY (read):\t%i\t\t %i\n", block.address, block.value);
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
@@ -184,8 +181,8 @@ AWORD read_memory(int address)
 
 //  -------------------------------------------------------------------
 
-// NOTE: Debug utility which prints out the bottom n elements 
-// of main_memory.
+//  NOTE: Debug utility which prints out the bottom n elements 
+//        of main_memory.
 void DEBUG_print_memory(int n)
 {
     for(int i = 0; i < n; ++i)
@@ -210,7 +207,7 @@ void DEBUG_print_tos(int n, int SP)
 void DEBUG_print_cache(void)
 {
     printf("Cache memory: \n");
-    for(int i = 0; i < 7; i++)
+    for(int i = 0; i < N_CACHE_WORDS; i++)
     {
         printf("%u: %i, %u, %i |", i, cache_memory[i].dirty,
                 cache_memory[i].address, cache_memory[i].value);
@@ -220,16 +217,14 @@ void DEBUG_print_cache(void)
 
 //  -------------------------------------------------------------------
 
-//  EXECUTE THE INSTRUCTIONS IN main_memory[]
-int execute_stackmachine(void)
-{
+// EXECUTE THE INSTRUCTIONS IN main_memory[]. Returns an int, representing the item stored at
+// the top of the stack.
+int execute_stackmachine(void) {
 //  THE 3 ON-CPU CONTROL REGISTERS:
     int PC      = 0;                    // 1st instruction is at address=0
     int SP      = N_MAIN_MEMORY_WORDS;  // initialised to top-of-stack
     int FP      = 0;                    // frame pointer
 
-// Since we can't declare new variables inside each case in the switch statement,
-// is this the best solution?
     AWORD address;
     AWORD valueStr;
     uint8_t bytes[2];
@@ -238,9 +233,7 @@ int execute_stackmachine(void)
 
     cache_init();
 
-    //DEBUG_print_memory(10);
     while(true) {
-
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
         IWORD instruction = read_memory(PC);
         ++PC;
@@ -252,20 +245,20 @@ int execute_stackmachine(void)
         //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
         //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
         //DEBUG_print_tos(11, SP);
-        //DEBUG_print_memory(7);
+        //DEBUG_print_memory(25);
 
+//      Halt: Program terminates.
         if(instruction == I_HALT) {
             break;
         }
 
-        switch(instruction)
-        {
-// No operation: PC advanced to the next instruction.
+        switch(instruction) {
+//          No operation: PC advanced to the next instruction.
             case I_NOP:
                 //++PC;
                 break;
 
-// Add: Two integers on TOS popped and added. Result is left on the TOS.
+//          Add: Two integers on the top of the stack popped and added. Result is left on top of the stack.
             case I_ADD:
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
@@ -273,7 +266,8 @@ int execute_stackmachine(void)
                 //printf("Arithmetic I_ADD: %i + %i\n", value2, value);
                 break;
 
-// Subtract: Two integers on TOS popped, second subtracted from first. Result is left on the TOS.
+//          Subtract: Two integers on the top of the stack popped, second subtracted from first. 
+//                    Result is left on the top of the stack.
             case I_SUB:
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
@@ -281,7 +275,7 @@ int execute_stackmachine(void)
                 //printf("Arithmetic I_SUB: %i - %i\n", value2, value);
                 break;
 
-//Multiply: Two integers on TOS popped and multiplied. Result is left on TOS.
+//          Multiply: Two integers on the top of the stack popped and multiplied. Result is left on top of the stack.
             case I_MULT:
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
@@ -289,7 +283,8 @@ int execute_stackmachine(void)
                 //printf("Arithmetic I_MULT: %i * %i\n", value2, value);
                 break;
 
-//Div: Two integers on TOS popped, second divided from first. Result is left on the TOS.
+//          Div: Two integers on the top of the stack popped, second divided from first. 
+//               Result is left on top of the stack.
             case I_DIV:
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
@@ -297,36 +292,40 @@ int execute_stackmachine(void)
                 //printf("Arithmetic I_DIV: %i / %i\n", value2, value);
                 break;
 
-// Call: Move PC to the next instruction to be executed, and set FP as required.
+//          Call: Move PC to the next instruction to be executed, and set FP as required.
+//                Also saves the address of the next instruction and the current
+//                value of the FP, in that order, onto the top of the stack.
             case I_CALL:
                 ++n_number_of_function_calls;
-                // save the address of the next instruction onto the stack
+//              save the address of the next instruction onto the stack
                 write_memory(--SP, PC + 1);
                 
-                // save the current value of FP onto the stack
+//              save the current value of FP onto the stack
                 write_memory(--SP, FP);
                 FP = SP;
 
-                // move PC to the first instruction of the function we are calling
+//              move PC to the first instruction of the function we are calling
                 PC = read_memory(PC);
 
-                //printf("calling function at address: %i\n", PC);
+//              printf("calling function at address: %i\n", PC);
                 break;
 
-// Return: WIP
+//          Return: Saves the value on the top of the stack into FP + an offset.
+//                  Program then returns to the instruction immediately after the
+//                  last call.
             case I_RETURN:
                 //DEBUG_print_tos(5, SP);
 
-                // read return value from TOS and compute FP-offset
+//              read return value from TOS and compute FP-offset
                 address = FP + read_memory(PC);
                 returnVal = read_memory(SP);
 
-                // restore PC, FP and SP to continue execution of the calling function
+//              restore PC, FP and SP to continue execution of the calling function
                 PC = read_memory(FP + 1);
                 FP = read_memory(FP);
                 SP = address;
 
-                // write return value to FP-offset
+//              write return value to FP-offset
                 write_memory(address, returnVal);
 
                 //printf("addrs: %i, val: %i\n", address, returnVal);
@@ -335,45 +334,48 @@ int execute_stackmachine(void)
                 //printf("return from function with value: %i\n", returnVal);
                 break;
 
-// Unconditional jump: Flow of execution jumps to the next specified address.
+//          Unconditional jump: Flow of execution jumps to the next specified address.
             case I_JMP:
                 PC = read_memory(PC);
                 break;
 
-// Conditional jump:  Value at TOS popped. Iff the value is zero, flow of execution jumps to the next specified address.
+//          Conditional jump:  Value at the top of the stack popped. Iff the value is 
+//                             zero, flow of execution jumps to the next specified address.
             case I_JEQ:
                 value = read_memory(SP++);
-                if(value == 0) { PC = read_memory(PC); }
-                else { ++PC; }
+                if(value == 0) PC = read_memory(PC);
+                else ++PC;
                 break;
 
-// Print integer: Value at TOS popped and printed to stdout.
+//          Print integer: Value at top of the stack popped and printed.
             case I_PRINTI:
                 value = read_memory(SP++);
                 fprintf(stdout, "%i", value);
                 break;
 
-// Print String: Print the next NULL-byte terminated character string. 
+//          Print String: Print the next NULL-byte terminated character string. 
             case I_PRINTS:
                 address = read_memory(PC++);
-                while(true)
-                {
+                // while we do not see a NULL-byte, mask two sets of 8-bits from the 16-bit word
+                // read from memory. each byte representing a character which we print to stdout.
+                while(true) {
                     valueStr = read_memory(address++);
                     bytes[0] = valueStr & 0x00FF;
                     bytes[1] = valueStr >> 8;
                     fprintf(stdout, "%c%c", bytes[0], bytes[1]);
-                    if(bytes[0] == '\0' || bytes[1] == '\0') { break; }
+                    if(bytes[0] == '\0' || bytes[1] == '\0') break;
                 }
                 break;
 
-// Push Constant: This should push an integer constant onto the stack.
+//          Push Constant: Pushes an integer constant onto the stack.
             case I_PUSHC:
                 value = read_memory(PC++);
                 write_memory(--SP, value);
                 //printf("pushing onto stack a value of: %i to %i\n", value, SP);
                 break;
 
-// Push Absolute: Push the integer in the address, which is specified in the word immediately after the push declaration..
+//          Push Absolute: Push the integer in the address, which is specified in 
+//                         the word immediately after the push declaration.
             case I_PUSHA:
                 address = read_memory(PC++);
                 value = read_memory(address);
@@ -381,7 +383,8 @@ int execute_stackmachine(void)
                 //printf("pushing onto stack a value of %i from address %i.\n", value, address);
                 break;
 
-// Push Relative: Push the integer in the next word, which specifies an address that is the frame pointer + offset.
+//          Push Relative: The next word specifies an offset added to the FP to read the value pushed
+//                         onto the top of the stack.
             case I_PUSHR:
                 address = read_memory(PC++) + FP;
                 value = read_memory(address);
@@ -389,7 +392,8 @@ int execute_stackmachine(void)
                 //printf("pushing value of %i from address %i.\n", value, address);
                 break;
 
-// Pop Absolute: A value from the TOS is popped. The next word provides the address to the offset from the TOS.
+//          Pop Absolute: A value from the top of the stack is popped. The next 
+//                        word provides the location to write the popped value to.
             case I_POPA:
                 address = read_memory(PC++);
                 value = read_memory(SP++);
@@ -397,7 +401,9 @@ int execute_stackmachine(void)
                 //printf("pop to address: %i, with value: %i\n", address, value);
                 break;
 
-// Pop Relative: A value from the TOS is popped. The next word provides the offset added to the FP, which provides an address to the offset from the TOS popped.
+//          Pop Relative: A value from the top of the stack is popped. The next word 
+//                        provides the offset added to the FP to provide the 
+//                        location to write the popped value to.
             case I_POPR:
                 address = read_memory(PC++) + FP;
                 value = read_memory(SP++);
@@ -408,25 +414,23 @@ int execute_stackmachine(void)
     }
 
 //  THE RESULT OF EXECUTING THE INSTRUCTIONS IS FOUND ON THE TOP-OF-STACK
-    return read_memory(SP);
+    exit_status = read_memory(SP);
+    return exit_status;
 }
 
 //  -------------------------------------------------------------------
 
 //  READ THE PROVIDED coolexe FILE INTO main_memory[]
-void read_coolexe_file(char filename[])
-{
+void read_coolexe_file(char filename[]) {
     memset(main_memory, 0, sizeof main_memory);   //  clear all memory
 
 //  READ CONTENTS OF coolexe FILE
     FILE *file = fopen(filename, "rb");
-    if(file)
-    {
+    if(file) {
         fread(main_memory, sizeof(AWORD), N_MAIN_MEMORY_WORDS, file);
         fclose(file);
     }
-    else
-    {
+    else {
         fprintf(stderr, "ERROR: Cannot open file %s.\n", filename);
         exit(EXIT_FAILURE);
     }
@@ -434,8 +438,7 @@ void read_coolexe_file(char filename[])
 
 //  -------------------------------------------------------------------
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 //  CHECK THE NUMBER OF ARGUMENTS
     if(argc != 2) {
         fprintf(stderr, "Usage: %s program.coolexe\n", argv[0]);
@@ -449,10 +452,6 @@ int main(int argc, char *argv[])
     int result = execute_stackmachine();
 
     report_statistics();
-
-// DEBUG: print TOS
-    printf("\nExit code: %i\n", result);
-///////////////////
 
     return result;          // or  exit(result);
 }
