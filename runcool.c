@@ -23,8 +23,6 @@ AWORD                       main_memory[N_MAIN_MEMORY_WORDS];
 //  THE SMALL-BUT-FAST CACHE HAS 32 WORDS OF MEMORY
 #define N_CACHE_WORDS       32
 
-
-//  Enumerates the instructions with their respective opcode.
 enum INSTRUCTION {
     I_HALT       = 0,
     I_NOP,
@@ -72,46 +70,44 @@ int n_main_memory_writes    = 0;
 int n_cache_memory_hits     = 0;
 int n_cache_memory_misses   = 0;
 
-// TODO REMOVE
 int n_number_of_instructions   = 0;
 int n_number_of_function_calls = 0;
 float n_percentage_of_cache_hits = 0;
-///////////
+int exit_status = 0;
 
-//  Reports the number of main memory read and writes, as well as cache memory hits and misses.
 void report_statistics(void) {
     printf("@number-of-main-memory-reads-(fast-jeq)  %i\n", n_main_memory_reads);
     printf("@number-of-main-memory-writes-(fast-jeq) %i\n", n_main_memory_writes);
     printf("@number-of-cache-memory-hits\t\t %i\n", n_cache_memory_hits);
     printf("@number-of-cache-memory-misses\t\t %i\n", n_cache_memory_misses);
 
-    // TODO REMOVE
     printf("\n@number-of-instructions\t\t%i\n", n_number_of_instructions);
     printf("@number-of-function-calls\t%i\n", n_number_of_function_calls);
 
     n_percentage_of_cache_hits = (float)n_cache_memory_hits / 
         ((float)n_cache_memory_misses + n_cache_memory_hits) * 100.0f;
     printf("@percentage-of-cache-hits\t%.1f%%\n", n_percentage_of_cache_hits);
-    /////////
+
+    printf("\n@exit(%i)\n", exit_status);
 }
 
 //  -------------------------------------------------------------------
 
-//  Array of structures that holds information regarding a cache block.
-//  Stored variables: bool dirty (Determines if the bit is dirty or not.)
-//                    int address (Points to the corresponding main_memory address.)
-//                    AWORD value (The 'word' stored in the cache block).
+//  The cache is represented as an array of cache blocks, where each block consists of:
+//      - dirty bit -> determines if the block is out-of-sync with main memory
+//      - address   -> points to the corresponding main_memory address
+//      - value     -> the word stored in the cache
 struct cache_block {
     bool dirty; // 1 dirty, 0 o/w.
     int address;
     AWORD value;
 } cache_memory[N_CACHE_WORDS];
 
-//  Function to warm up the cache. Sets all cache blocks in cache_memory to dirty and point
-//  to an address somewhere in the middle of the stack.
+// Initialise all cache blocks in the cache to be dirty with an temporary
+// address pointing to the middle of memory.
 void cache_init(void) {
     for(int i = 0; i < N_CACHE_WORDS; ++i) {
-        cache_memory[i].address = N_MAIN_MEMORY_WORDS/2 - i - 1;
+        cache_memory[i].address = N_MAIN_MEMORY_WORDS/2;
         cache_memory[i].dirty = 1;
     }
 }
@@ -126,15 +122,14 @@ void write_memory(int address, AWORD value)
 {
     //printf("write memory: %i -> %i\n", address, value);
 
-    int cache_address = address % N_CACHE_WORDS;
-
 //  Locates the cache block to use.
+    int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
-//  Successful cache hit.
+//  cache miss
     if(block.address != address) {
-
-        if(block.dirty) {
+        // if the block is dirty but is also not the block we initialised at the start of execution
+        if(block.dirty && block.address != N_MAIN_MEMORY_WORDS/2) {
             //printf("WRITING DIRTY (write):\t%i\t\t %i\n", block.address, block.value);
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
@@ -154,27 +149,23 @@ AWORD read_memory(int address)
 {
     //printf("read_memory: %i\n", address);
 
-    int cache_address = address % N_CACHE_WORDS;
-
 //  locate cache block to use
+    int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
-//  cache hits
+//  cache hit
     if(block.address == address) {
         //printf("hit on read: %i, %i\n", address, cache_address);
         ++n_cache_memory_hits;
         return block.value;
     }
-    
-//  cache misses
+//  cache miss
     else {
         ++n_cache_memory_misses;
         ++n_main_memory_reads;
 
         if(block.dirty) {
             //printf("WRITING DIRTY (read):\t%i\t\t %i\n", block.address, block.value);
-            //write_memory(block.address, block.value);
-            
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
         }
@@ -234,7 +225,6 @@ int execute_stackmachine(void) {
     int SP      = N_MAIN_MEMORY_WORDS;  // initialised to top-of-stack
     int FP      = 0;                    // frame pointer
 
-// Variables cannot be declared within switch statements, so they are stored in these local variables.
     AWORD address;
     AWORD valueStr;
     uint8_t bytes[2];
@@ -262,7 +252,6 @@ int execute_stackmachine(void) {
             break;
         }
 
-//      Switch statement that holds all instructions with the exception of halt.
         switch(instruction) {
 //          No operation: PC advanced to the next instruction.
             case I_NOP:
@@ -354,8 +343,8 @@ int execute_stackmachine(void) {
 //                             zero, flow of execution jumps to the next specified address.
             case I_JEQ:
                 value = read_memory(SP++);
-                if(value == 0) { PC = read_memory(PC); }
-                else { ++PC; }
+                if(value == 0) PC = read_memory(PC);
+                else ++PC;
                 break;
 
 //          Print integer: Value at top of the stack popped and printed.
@@ -367,12 +356,14 @@ int execute_stackmachine(void) {
 //          Print String: Print the next NULL-byte terminated character string. 
             case I_PRINTS:
                 address = read_memory(PC++);
+                // while we do not see a NULL-byte, mask two sets of 8-bits from the 16-bit word
+                // read from memory. each byte representing a character which we print to stdout.
                 while(true) {
                     valueStr = read_memory(address++);
                     bytes[0] = valueStr & 0x00FF;
                     bytes[1] = valueStr >> 8;
                     fprintf(stdout, "%c%c", bytes[0], bytes[1]);
-                    if(bytes[0] == '\0' || bytes[1] == '\0') { break; }
+                    if(bytes[0] == '\0' || bytes[1] == '\0') break;
                 }
                 break;
 
@@ -423,7 +414,8 @@ int execute_stackmachine(void) {
     }
 
 //  THE RESULT OF EXECUTING THE INSTRUCTIONS IS FOUND ON THE TOP-OF-STACK
-    return read_memory(SP);
+    exit_status = read_memory(SP);
+    return exit_status;
 }
 
 //  -------------------------------------------------------------------
@@ -460,10 +452,6 @@ int main(int argc, char *argv[]) {
     int result = execute_stackmachine();
 
     report_statistics();
-
-// DEBUG: print TOS
-    printf("\nExit code: %i\n", result);
-///////////////////
 
     return result;          // or  exit(result);
 }
