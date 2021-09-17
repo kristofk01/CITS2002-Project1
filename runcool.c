@@ -118,8 +118,7 @@ void cache_init(void) {
 //  Variable arguments: int address (The address where the value will be written into.)
 //                      AWORD value (The value that will be stored.)
 
-void write_memory(int address, AWORD value)
-{
+void write_memory(int address, AWORD value) {
 //  Locates the cache block to use.
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
@@ -142,8 +141,7 @@ void write_memory(int address, AWORD value)
 
 //  Function to implement the reading aspect of the write-back cache policy.
 //  Variable arguments: int address (The address where the value will be read from.)
-AWORD read_memory(int address)
-{
+AWORD read_memory(int address) {
 //  locate cache block to use
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
@@ -153,6 +151,7 @@ AWORD read_memory(int address)
         ++n_cache_memory_hits;
         return block.value;
     }
+
 //  cache miss
     else {
         ++n_cache_memory_misses;
@@ -193,7 +192,6 @@ int execute_stackmachine(void) {
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
         IWORD instruction = read_memory(PC);
         ++PC;
-
         ++n_number_of_instructions;
 
 //      Halt: Program terminates.
@@ -291,8 +289,8 @@ int execute_stackmachine(void) {
 //          Print String: Print the next NULL-byte terminated character string. 
             case I_PRINTS:
                 address = read_memory(PC++);
-                // while we do not see a NULL-byte, mask two sets of 8-bits from the 16-bit word
-                // read from memory. each byte representing a character which we print to stdout.
+//              while we do not see a NULL-byte, mask two sets of 8-bits from the 16-bit word
+//              read from memory. each byte representing a character which we print to stdout.
                 while(true) {
                     uValue = read_memory(address++);
                     bytes[0] = uValue & 0x00FF;
