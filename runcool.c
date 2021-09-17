@@ -136,6 +136,7 @@ void write_memory(int address, AWORD value)
         }
     }
 
+//  write new dirty block to cache
     block.dirty = 1;
     block.address = address;
     block.value = value;
@@ -170,6 +171,7 @@ AWORD read_memory(int address)
             main_memory[block.address] = block.value;
         }
 
+//      populate new block
         block.dirty = 0;
         block.address = address;
         block.value = main_memory[address];
