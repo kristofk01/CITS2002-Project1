@@ -118,10 +118,7 @@ void cache_init(void) {
 //  Variable arguments: int address (The address where the value will be written into.)
 //                      AWORD value (The value that will be stored.)
 
-void write_memory(int address, AWORD value)
-{
-    //printf("write memory: %i -> %i\n", address, value);
-
+void write_memory(int address, AWORD value) {
 //  Locates the cache block to use.
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
@@ -130,7 +127,6 @@ void write_memory(int address, AWORD value)
     if(block.address != address) {
         // if the block is dirty but is also not the block we initialised at the start of execution
         if(block.dirty && block.address != N_MAIN_MEMORY_WORDS/2) {
-            //printf("WRITING DIRTY (write):\t%i\t\t %i\n", block.address, block.value);
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
         }
@@ -141,32 +137,27 @@ void write_memory(int address, AWORD value)
     block.address = address;
     block.value = value;
     cache_memory[cache_address] = block;
-    //printf("WROTE NEW BLOCK %i (write):\td: %i,\ta: %i,\tv: %i\n", cache_address, block.dirty, block.address, block.value);
 }
 
 //  Function to implement the reading aspect of the write-back cache policy.
 //  Variable arguments: int address (The address where the value will be read from.)
-AWORD read_memory(int address)
-{
-    //printf("read_memory: %i\n", address);
-
+AWORD read_memory(int address) {
 //  locate cache block to use
     int cache_address = address % N_CACHE_WORDS;
     struct cache_block block = cache_memory[cache_address];
 
 //  cache hit
     if(block.address == address) {
-        //printf("hit on read: %i, %i\n", address, cache_address);
         ++n_cache_memory_hits;
         return block.value;
     }
+
 //  cache miss
     else {
         ++n_cache_memory_misses;
         ++n_main_memory_reads;
 
         if(block.dirty) {
-            //printf("WRITING DIRTY (read):\t%i\t\t %i\n", block.address, block.value);
             ++n_main_memory_writes;
             main_memory[block.address] = block.value;
         }
@@ -176,45 +167,8 @@ AWORD read_memory(int address)
         block.address = address;
         block.value = main_memory[address];
         cache_memory[cache_address] = block;
-        //printf("WROTE NEW BLOCK %i (read):\td: %i,\ta: %i,\tv: %i\n", cache_address, block.dirty, block.address, block.value);
     }
     return block.value;
-}
-
-//  -------------------------------------------------------------------
-
-//  NOTE: Debug utility which prints out the bottom n elements 
-//        of main_memory.
-void DEBUG_print_memory(int n)
-{
-    for(int i = 0; i < n; ++i)
-    {
-        printf("%i, ", main_memory[i]);
-    }
-    printf("\n");
-}
-
-// Prints n elements of the stack
-void DEBUG_print_tos(int n, int SP)
-{
-    int k = N_MAIN_MEMORY_WORDS;
-    printf("\nStack -> address: value\n\t");
-    for(int i = k; i > (k - n); --i)
-    {
-        printf("%i: %i, ", i, main_memory[i]);
-    }
-    printf("\nTOS -> %i: %i\n\n", SP, main_memory[SP]);
-}
-
-void DEBUG_print_cache(void)
-{
-    printf("Cache memory: \n");
-    for(int i = 0; i < N_CACHE_WORDS; i++)
-    {
-        printf("%u: %i, %u, %i |", i, cache_memory[i].dirty,
-                cache_memory[i].address, cache_memory[i].value);
-    }
-    printf("\n");
 }
 
 //  -------------------------------------------------------------------
@@ -239,15 +193,7 @@ int execute_stackmachine(void) {
 //  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
         IWORD instruction = read_memory(PC);
         ++PC;
-
         ++n_number_of_instructions;
-
-        //DEBUG_print_cache();
-        //printf("################################\n");
-        //printf("\n>> %s\n", INSTRUCTION_name[instruction]);
-        //printf("SP: %i\nPC: %i\nFP: %i\n", SP, PC, FP);
-        //DEBUG_print_tos(11, SP);
-        //DEBUG_print_memory(25);
 
 //      Halt: Program terminates.
         if(instruction == I_HALT) {
@@ -257,7 +203,6 @@ int execute_stackmachine(void) {
         switch(instruction) {
 //          No operation: PC advanced to the next instruction.
             case I_NOP:
-                //++PC;
                 break;
 
 //          Add: Two integers on the top of the stack popped and added. Result is left on top of the stack.
@@ -265,7 +210,6 @@ int execute_stackmachine(void) {
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 + value);
-                //printf("Arithmetic I_ADD: %i + %i\n", value2, value);
                 break;
 
 //          Subtract: Two integers on the top of the stack popped, second subtracted from first. 
@@ -274,7 +218,6 @@ int execute_stackmachine(void) {
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 - value);
-                //printf("Arithmetic I_SUB: %i - %i\n", value2, value);
                 break;
 
 //          Multiply: Two integers on the top of the stack popped and multiplied. Result is left on top of the stack.
@@ -282,7 +225,6 @@ int execute_stackmachine(void) {
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 * value);
-                //printf("Arithmetic I_MULT: %i * %i\n", value2, value);
                 break;
 
 //          Div: Two integers on the top of the stack popped, second divided from first. 
@@ -291,7 +233,6 @@ int execute_stackmachine(void) {
                 value = read_memory(SP++);
                 value2 = read_memory(SP);
                 write_memory(SP, value2 / value);
-                //printf("Arithmetic I_DIV: %i / %i\n", value2, value);
                 break;
 
 //          Call: Move PC to the next instruction to be executed, and set FP as required.
@@ -308,15 +249,12 @@ int execute_stackmachine(void) {
 
 //              move PC to the first instruction of the function we are calling
                 PC = read_memory(PC);
-
-//              printf("calling function at address: %i\n", PC);
                 break;
 
 //          Return: Saves the value on the top of the stack into FP + an offset.
 //                  Program then returns to the instruction immediately after the
 //                  last call.
             case I_RETURN:
-                //DEBUG_print_tos(5, SP);
 
 //              read return value from TOS and compute FP-offset
                 address = FP + read_memory(PC);
@@ -329,11 +267,6 @@ int execute_stackmachine(void) {
 
 //              write return value to FP-offset
                 write_memory(address, returnVal);
-
-                //printf("addrs: %i, val: %i\n", address, returnVal);
-                //DEBUG_print_tos(5, SP);
-                //printf("SP: %i, PC: %i, FP: %i\n\n", SP, PC, FP);
-                //printf("return from function with value: %i\n", returnVal);
                 break;
 
 //          Unconditional jump: Flow of execution jumps to the next specified address.
@@ -358,8 +291,8 @@ int execute_stackmachine(void) {
 //          Print String: Print the next NULL-byte terminated character string. 
             case I_PRINTS:
                 address = read_memory(PC++);
-                // while we do not see a NULL-byte, mask two sets of 8-bits from the 16-bit word
-                // read from memory. each byte representing a character which we print to stdout.
+//              while we do not see a NULL-byte, mask two sets of 8-bits from the 16-bit word
+//              read from memory. each byte representing a character which we print to stdout.
                 while(true) {
                     valueStr = read_memory(address++);
                     bytes[0] = valueStr & 0x00FF;
@@ -373,7 +306,6 @@ int execute_stackmachine(void) {
             case I_PUSHC:
                 value = read_memory(PC++);
                 write_memory(--SP, value);
-                //printf("pushing onto stack a value of: %i to %i\n", value, SP);
                 break;
 
 //          Push Absolute: Push the integer in the address, which is specified in 
@@ -382,7 +314,6 @@ int execute_stackmachine(void) {
                 address = read_memory(PC++);
                 value = read_memory(address);
                 write_memory(--SP, value);
-                //printf("pushing onto stack a value of %i from address %i.\n", value, address);
                 break;
 
 //          Push Relative: The next word specifies an offset added to the FP to read the value pushed
@@ -391,7 +322,6 @@ int execute_stackmachine(void) {
                 address = read_memory(PC++) + FP;
                 value = read_memory(address);
                 write_memory(--SP, value);
-                //printf("pushing value of %i from address %i.\n", value, address);
                 break;
 
 //          Pop Absolute: A value from the top of the stack is popped. The next 
@@ -400,7 +330,6 @@ int execute_stackmachine(void) {
                 address = read_memory(PC++);
                 value = read_memory(SP++);
                 write_memory(address, value);
-                //printf("pop to address: %i, with value: %i\n", address, value);
                 break;
 
 //          Pop Relative: A value from the top of the stack is popped. The next word 
@@ -410,7 +339,6 @@ int execute_stackmachine(void) {
                 address = read_memory(PC++) + FP;
                 value = read_memory(SP++);
                 write_memory(address, value);
-                //printf("pop to address: %i, with value: %i\n", address, value);
                 break;
         }
     }
