@@ -205,7 +205,6 @@ int execute_stackmachine(void) {
         switch(instruction) {
 //          No operation: PC advanced to the next instruction.
             case I_NOP:
-                //++PC;
                 break;
 
 //          Add: Two integers on the top of the stack popped and added. Result is left on top of the stack.
