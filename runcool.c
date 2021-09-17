@@ -183,10 +183,9 @@ int execute_stackmachine(void) {
     int FP      = 0;                    // frame pointer
 
     AWORD address;
-    AWORD valueStr;
+    IWORD value, value2;    // signed
+    AWORD uValue;           // unsigned
     uint8_t bytes[2];
-    IWORD returnVal;
-    IWORD value, value2;
 
     cache_init();
 
@@ -259,7 +258,7 @@ int execute_stackmachine(void) {
             case I_RETURN:
 //              read return value from TOS and compute FP-offset
                 address = FP + read_memory(PC);
-                returnVal = read_memory(SP);
+                value = read_memory(SP);
 
 //              restore PC, FP and SP to continue execution of the calling function
                 PC = read_memory(FP + 1);
@@ -267,7 +266,7 @@ int execute_stackmachine(void) {
                 SP = address;
 
 //              write return value to FP-offset
-                write_memory(address, returnVal);
+                write_memory(address, value);
                 break;
 
 //          Unconditional jump: Flow of execution jumps to the next specified address.
@@ -295,9 +294,9 @@ int execute_stackmachine(void) {
                 // while we do not see a NULL-byte, mask two sets of 8-bits from the 16-bit word
                 // read from memory. each byte representing a character which we print to stdout.
                 while(true) {
-                    valueStr = read_memory(address++);
-                    bytes[0] = valueStr & 0x00FF;
-                    bytes[1] = valueStr >> 8;
+                    uValue = read_memory(address++);
+                    bytes[0] = uValue & 0x00FF;
+                    bytes[1] = uValue >> 8;
                     fprintf(stdout, "%c%c", bytes[0], bytes[1]);
                     if(bytes[0] == '\0' || bytes[1] == '\0') break;
                 }
